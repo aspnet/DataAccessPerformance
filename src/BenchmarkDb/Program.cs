@@ -184,6 +184,7 @@ namespace BenchmarkDb
                     try
                     {
                         var results = new List<Fortune>();
+
                         using (var connection = factory.CreateConnection())
                         {
                             connection.ConnectionString = connectionString;
@@ -225,20 +226,21 @@ namespace BenchmarkDb
             {
                 using (var connection = factory.CreateConnection())
                 {
-                    connection.ConnectionString = connectionString;
-                    await connection.OpenAsync();
-
-                    while (_stopping != 1)
+                    using (var command = connection.CreateCommand())
                     {
-                        Interlocked.Increment(ref _counter);
+                        connection.ConnectionString = connectionString;
+                        await connection.OpenAsync();
 
-                        try
+                        command.CommandText = SqlQuery;
+                        command.Prepare();
+
+                        while (_stopping != 1)
                         {
-                            var results = new List<Fortune>();
-                            using (var command = connection.CreateCommand())
+                            Interlocked.Increment(ref _counter);
+
+                            try
                             {
-                                command.CommandText = SqlQuery;
-                                command.Prepare();
+                                var results = new List<Fortune>();
 
                                 using (var reader = await command.ExecuteReaderAsync())
                                 {
@@ -251,16 +253,16 @@ namespace BenchmarkDb
                                         });
                                     }
                                 }
-                            }
 
-                            if (results.Count != 12)
-                            {
-                                throw new InvalidDataException("Not 12");
+                                if (results.Count != 12)
+                                {
+                                    throw new InvalidDataException("Not 12");
+                                }
                             }
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e.Message);
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
+                            }
                         }
                     }
                 }
@@ -275,14 +277,17 @@ namespace BenchmarkDb
                     try
                     {
                         var results = new List<Fortune>();
+
                         using (var connection = factory.CreateConnection())
                         {
                             connection.ConnectionString = connectionString;
                             connection.Open();
+
                             using (var command = connection.CreateCommand())
                             {
                                 command.CommandText = SqlQuery;
                                 command.Prepare();
+
                                 using (var reader = command.ExecuteReader())
                                 {
                                     while (reader.Read())
@@ -313,21 +318,22 @@ namespace BenchmarkDb
             {
                 using (var connection = factory.CreateConnection())
                 {
-                    connection.ConnectionString = connectionString;
-                    connection.Open();
-
-                    while (_stopping != 1)
+                    using (var command = connection.CreateCommand())
                     {
-                        Interlocked.Increment(ref _counter);
+                        connection.ConnectionString = connectionString;
+                        connection.Open();
 
-                        try
+                        command.CommandText = SqlQuery;
+                        command.Prepare();
+
+                        while (_stopping != 1)
                         {
-                            var results = new List<Fortune>();
+                            Interlocked.Increment(ref _counter);
 
-                            using (var command = connection.CreateCommand())
+                            try
                             {
-                                command.CommandText = SqlQuery;
-                                command.Prepare();
+                                var results = new List<Fortune>();
+
                                 using (var reader = command.ExecuteReader())
                                 {
                                     while (reader.Read())
@@ -339,16 +345,16 @@ namespace BenchmarkDb
                                         });
                                     }
                                 }
-                            }
 
-                            if (results.Count != 12)
-                            {
-                                throw new InvalidDataException("Not 12");
+                                if (results.Count != 12)
+                                {
+                                    throw new InvalidDataException("Not 12");
+                                }
                             }
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e.Message);
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
+                            }
                         }
                     }
                 }
