@@ -12,7 +12,7 @@ using Npgsql;
 
 namespace BenchmarkDb
 {
-    class Program
+    public class Program
     {
         static volatile int _counter = 0;
         static volatile int _stopping = 0;
@@ -25,10 +25,8 @@ namespace BenchmarkDb
 
         static object synlock = new object();
 
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            
-
             if (args.Length < 3)
             {
                 Console.WriteLine("usage: database connectionstring threads mode time(s) desc");
@@ -48,7 +46,7 @@ namespace BenchmarkDb
 
             if (mode != "async" && mode != "sync")
             {
-                Console.WriteLine("Accepted mode values: sync, async");
+                Console.WriteLine("Accepted mode values: sync, async, sync+conn, async+conn");
                 Environment.Exit(1);
             }
 
@@ -97,6 +95,14 @@ namespace BenchmarkDb
                 case "async":
                     tasks = Enumerable.Range(1, numThreads).Select(_ => Task.Factory.StartNew(DoWorkAsync, TaskCreationOptions.LongRunning).Unwrap()).ToList();
                     break;
+
+                case "sync+conn":
+                    tasks = Enumerable.Range(1, numThreads).Select(_ => Task.Factory.StartNew(DoWorkSyncReuseConnection, TaskCreationOptions.LongRunning)).ToList();
+                    break;
+
+                case "async+conn":
+                    tasks = Enumerable.Range(1, numThreads).Select(_ => Task.Factory.StartNew(DoWorkAsyncReuseConnection, TaskCreationOptions.LongRunning).Unwrap()).ToList();
+                    break;
             }
 
             // Displays and records the current status of the test
@@ -138,7 +144,7 @@ namespace BenchmarkDb
                 })
             );
 
-            Task.WhenAll(tasks).GetAwaiter().GetResult();
+            await Task.WhenAll(tasks);
 
             var totalTps = (int) (totalTransactions / (stopTime - startTime).TotalSeconds);
 
@@ -202,15 +208,60 @@ namespace BenchmarkDb
                             }
                         }
 
-                        if (results.Count() != 12)
+                        if (results.Count != 12)
                         {
-                            throw new ApplicationException("Not 12");
+                            throw new InvalidDataException("Not 12");
                         }
 
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e.Message);
+                    }
+                }
+            }
+
+            async Task DoWorkAsyncReuseConnection()
+            {
+                using (var connection = factory.CreateConnection())
+                {
+                    connection.ConnectionString = connectionString;
+                    await connection.OpenAsync();
+
+                    while (_stopping != 1)
+                    {
+                        Interlocked.Increment(ref _counter);
+
+                        try
+                        {
+                            var results = new List<Fortune>();
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.CommandText = SqlQuery;
+                                command.Prepare();
+
+                                using (var reader = await command.ExecuteReaderAsync())
+                                {
+                                    while (await reader.ReadAsync())
+                                    {
+                                        results.Add(new Fortune
+                                        {
+                                            Id = reader.GetInt32(0),
+                                            Message = reader.GetString(1)
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (results.Count != 12)
+                            {
+                                throw new InvalidDataException("Not 12");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
                     }
                 }
             }
@@ -246,14 +297,59 @@ namespace BenchmarkDb
                             }
                         }
 
-                        if (results.Count() != 12)
+                        if (results.Count != 12)
                         {
-                            throw new ApplicationException("Not 12");
+                            throw new InvalidDataException("Not 12");
                         }
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e.Message);
+                    }
+                }
+            }
+
+            void DoWorkSyncReuseConnection()
+            {
+                using (var connection = factory.CreateConnection())
+                {
+                    connection.ConnectionString = connectionString;
+                    connection.Open();
+
+                    while (_stopping != 1)
+                    {
+                        Interlocked.Increment(ref _counter);
+
+                        try
+                        {
+                            var results = new List<Fortune>();
+
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.CommandText = SqlQuery;
+                                command.Prepare();
+                                using (var reader = command.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        results.Add(new Fortune
+                                        {
+                                            Id = reader.GetInt32(0),
+                                            Message = reader.GetString(1)
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (results.Count != 12)
+                            {
+                                throw new InvalidDataException("Not 12");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
                     }
                 }
             }
