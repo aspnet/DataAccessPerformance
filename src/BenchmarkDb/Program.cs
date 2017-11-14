@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -20,26 +19,23 @@ namespace BenchmarkDb
         private const int DefaultExecutionTimeSeconds = 10;
         private const int WarmupTimeSeconds = 3;
 
-        private const string TestQuery = "SELECT id, message FROM fortune";
+        public const string TestQuery = "SELECT id, message FROM fortune";
 
         private static int _counter;
-        private static int _stopping;
 
-        private static readonly IDictionary<string, DbProviderFactory> _drivers
-            = new Dictionary<string, DbProviderFactory>
-            {
-                { "ado-npgsql", NpgsqlFactory.Instance },
-                { "ado-mysql", MySqlClientFactory.Instance },
-                { "ado-sqlclient", SqlClientFactory.Instance }
-            };
+        public static void IncrementCounter() => Interlocked.Increment(ref _counter);
 
-        private static readonly IDictionary<string, Func<DbProviderFactory, string, Task>> _variations
-            = new Dictionary<string, Func<DbProviderFactory, string, Task>>
+        private static int _running;
+
+        public static bool IsRunning => _running == 1;
+
+        private static readonly IDictionary<string, DriverBase> _drivers
+            = new Dictionary<string, DriverBase>
             {
-                { "sync", DoWorkSync },
-                { "sync-caching", DoWorkSyncCaching },
-                { "async", DoWorkAsync },
-                { "async-caching", DoWorkAsyncCaching }
+                { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
+                { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
+                { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
+                { "peregrine", new PeregrineDriver() }
             };
 
         public static async Task<int> Main(string[] args)
@@ -54,7 +50,7 @@ namespace BenchmarkDb
                 Console.WriteLine("Arguments:");
                 Console.WriteLine($"  <driver>            The target database driver ({string.Join(", ", _drivers.Keys.Select(k => $"'{k}'"))}).");
                 Console.WriteLine("  <connection-string> The target database connection string.");
-                Console.WriteLine($"  <variation>:        The specific variation to run ({string.Join(", ", _variations.Keys.Select(k => $"'{k}'"))}).");
+                Console.WriteLine($"  <variation>:        The specific variation to run ({string.Join(", ", DriverBase.VariationNames.Select(k => $"'{k}'"))}).");
                 Console.WriteLine();
                 Console.WriteLine("Options:");
                 Console.WriteLine("  [threads]:   The number of threads to spawn (default 16).");
@@ -90,8 +86,9 @@ namespace BenchmarkDb
             }
 
             var variationName = args[2];
+            var variation = driver.TryGetVariation(variationName);
 
-            if (!_variations.TryGetValue(variationName, out var variation))
+            if (variation == null)
             {
                 return Help(("variation", variationName));
             }
@@ -116,6 +113,8 @@ namespace BenchmarkDb
             var totalTransactions = 0;
             var results = new List<double>();
 
+            Interlocked.Exchange(ref _running, 1);
+
             IEnumerable<Task> CreateTasks()
             {
                 yield return Task.Run(
@@ -132,7 +131,7 @@ namespace BenchmarkDb
                             startTime = DateTime.UtcNow;
                             var lastDisplay = startTime;
 
-                            while (_stopping != 1)
+                            while (IsRunning)
                             {
                                 await Task.Delay(200);
 
@@ -155,7 +154,7 @@ namespace BenchmarkDb
                         {
                             await Task.Delay(TimeSpan.FromSeconds(WarmupTimeSeconds + time));
 
-                            Interlocked.Exchange(ref _stopping, 1);
+                            Interlocked.Exchange(ref _running, 0);
 
                             stopTime = DateTime.UtcNow;
                         });
@@ -163,7 +162,7 @@ namespace BenchmarkDb
                 foreach (var task in Enumerable.Range(0, threadCount)
                     .Select(
                         _ => Task.Factory
-                            .StartNew(() => variation(driver, connectionString), TaskCreationOptions.LongRunning)
+                            .StartNew(() => variation(connectionString), TaskCreationOptions.LongRunning)
                             .Unwrap()))
                 {
                     yield return task;
@@ -204,172 +203,6 @@ namespace BenchmarkDb
             }
 
             return 0;
-        }
-
-        private static Task DoWorkSync(DbProviderFactory providerFactory, string connectionString)
-        {
-            while (_stopping != 1)
-            {
-                Interlocked.Increment(ref _counter);
-
-                var results = new List<Fortune>();
-
-                using (var connection = providerFactory.CreateConnection())
-                {
-                    connection.ConnectionString = connectionString;
-                    connection.Open();
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = TestQuery;
-                        command.Prepare();
-
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                results.Add(
-                                    new Fortune
-                                    {
-                                        Id = reader.GetInt32(0),
-                                        Message = reader.GetString(1)
-                                    });
-                            }
-                        }
-                    }
-                }
-
-                if (results.Count != 12)
-                {
-                    throw new InvalidOperationException("Unexpected number of results!");
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private static Task DoWorkSyncCaching(DbProviderFactory providerFactory, string connectionString)
-        {
-            using (var connection = providerFactory.CreateConnection())
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    connection.ConnectionString = connectionString;
-                    connection.Open();
-
-                    command.CommandText = TestQuery;
-                    command.Prepare();
-
-                    while (_stopping != 1)
-                    {
-                        Interlocked.Increment(ref _counter);
-
-                        var results = new List<Fortune>();
-
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                results.Add(
-                                    new Fortune
-                                    {
-                                        Id = reader.GetInt32(0),
-                                        Message = reader.GetString(1)
-                                    });
-                            }
-                        }
-
-                        if (results.Count != 12)
-                        {
-                            throw new InvalidOperationException("Unexpected number of results!");
-                        }
-                    }
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private static async Task DoWorkAsync(DbProviderFactory providerFactory, string connectionString)
-        {
-            while (_stopping != 1)
-            {
-                Interlocked.Increment(ref _counter);
-
-                var results = new List<Fortune>();
-
-                using (var connection = providerFactory.CreateConnection())
-                {
-                    connection.ConnectionString = connectionString;
-
-                    await connection.OpenAsync();
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = TestQuery;
-                        command.Prepare();
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                results.Add(
-                                    new Fortune
-                                    {
-                                        Id = reader.GetInt32(0),
-                                        Message = reader.GetString(1)
-                                    });
-                            }
-                        }
-                    }
-                }
-
-                if (results.Count != 12)
-                {
-                    throw new InvalidOperationException("Unexpected number of results!");
-                }
-            }
-        }
-
-        private static async Task DoWorkAsyncCaching(DbProviderFactory providerFactory, string connectionString)
-        {
-            using (var connection = providerFactory.CreateConnection())
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    connection.ConnectionString = connectionString;
-
-                    await connection.OpenAsync();
-
-                    command.CommandText = TestQuery;
-                    command.Prepare();
-
-                    while (_stopping != 1)
-                    {
-                        Interlocked.Increment(ref _counter);
-
-                        var results = new List<Fortune>();
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                results.Add(
-                                    new Fortune
-                                    {
-                                        Id = reader.GetInt32(0),
-                                        Message = reader.GetString(1)
-                                    });
-                            }
-                        }
-
-                        if (results.Count != 12)
-                        {
-                            throw new InvalidOperationException("Unexpected number of results!");
-                        }
-                    }
-                }
-            }
         }
     }
 }
