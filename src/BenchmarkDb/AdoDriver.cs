@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -17,30 +16,13 @@ namespace BenchmarkDb
             _providerFactory = providerFactory;
         }
 
-        public override Func<string, Task> TryGetVariation(string variationName)
-        {
-            switch (variationName)
-            {
-                case Variation.Sync:
-                    return s => DoWorkSync(_providerFactory, s);
-                case Variation.SyncCaching:
-                    return s => DoWorkSyncCaching(_providerFactory, s);
-                case Variation.Async:
-                    return s => DoWorkAsync(_providerFactory, s);
-                case Variation.AsyncCaching:
-                    return s => DoWorkAsyncCaching(_providerFactory, s);
-            }
-
-            return default;
-        }
-
-        public static Task DoWorkSync(DbProviderFactory providerFactory, string connectionString)
+        public override Task DoWorkSync(string connectionString)
         {
             while (Program.IsRunning)
             {
                 var results = new List<Fortune>();
 
-                using (var connection = providerFactory.CreateConnection())
+                using (var connection = _providerFactory.CreateConnection())
                 {
                     connection.ConnectionString = connectionString;
                     connection.Open();
@@ -73,9 +55,9 @@ namespace BenchmarkDb
             return Task.CompletedTask;
         }
 
-        public static Task DoWorkSyncCaching(DbProviderFactory providerFactory, string connectionString)
+        public override Task DoWorkSyncCaching(string connectionString)
         {
-            using (var connection = providerFactory.CreateConnection())
+            using (var connection = _providerFactory.CreateConnection())
             {
                 using (var command = connection.CreateCommand())
                 {
@@ -112,13 +94,13 @@ namespace BenchmarkDb
             return Task.CompletedTask;
         }
 
-        public static async Task DoWorkAsync(DbProviderFactory providerFactory, string connectionString)
+        public override async Task DoWorkAsync(string connectionString)
         {
             while (Program.IsRunning)
             {
                 var results = new List<Fortune>();
 
-                using (var connection = providerFactory.CreateConnection())
+                using (var connection = _providerFactory.CreateConnection())
                 {
                     connection.ConnectionString = connectionString;
 
@@ -150,9 +132,9 @@ namespace BenchmarkDb
             }
         }
 
-        public static async Task DoWorkAsyncCaching(DbProviderFactory providerFactory, string connectionString)
+        public override async Task DoWorkAsyncCaching(string connectionString)
         {
-            using (var connection = providerFactory.CreateConnection())
+            using (var connection = _providerFactory.CreateConnection())
             {
                 using (var command = connection.CreateCommand())
                 {

@@ -9,27 +9,6 @@ namespace BenchmarkDb
 {
     public abstract class DriverBase
     {
-        public static class Variation
-        {
-            public const string Sync = "sync";
-            public const string SyncCaching = "sync-caching";
-            public const string Async = "async";
-            public const string AsyncCaching = "async-caching";
-        }
-
-        public static IEnumerable<string> VariationNames
-        {
-            get
-            {
-                yield return Variation.Sync;
-                yield return Variation.SyncCaching;
-                yield return Variation.Async;
-                yield return Variation.AsyncCaching;
-            }
-        }
-
-        public abstract Func<string, Task> TryGetVariation(string variationName);
-
         protected static void CheckResults(ICollection<Fortune> results)
         {
             if (results.Count != 12)
@@ -37,5 +16,45 @@ namespace BenchmarkDb
                 throw new InvalidOperationException($"Unexpected number of results! Expected 12 got {results.Count}");
             }
         }
+
+        public Func<string, Task> TryGetVariation(string variationName)
+        {
+            switch (variationName)
+            {
+                case Variation.Sync:
+                    return DoWorkSync;
+                case Variation.SyncCaching:
+                    return DoWorkSyncCaching;
+                case Variation.Async:
+                    return DoWorkAsync;
+                case Variation.AsyncCaching:
+                    return DoWorkAsyncCaching;
+            }
+
+            return default;
+        }
+
+        public virtual Task DoWorkSync(string connectionString)
+        {
+            throw VariationNotSupported(Variation.Sync);
+        }
+
+        public virtual Task DoWorkSyncCaching(string connectionString)
+        {
+            throw VariationNotSupported(Variation.SyncCaching);
+        }
+
+        public virtual Task DoWorkAsync(string connectionString)
+        {
+            throw VariationNotSupported(Variation.Async);
+        }
+
+        public virtual Task DoWorkAsyncCaching(string connectionString)
+        {
+            throw VariationNotSupported(Variation.AsyncCaching);
+        }
+
+        private static Exception VariationNotSupported(string variationName)
+            => new NotSupportedException($"Variation {variationName} not supported on driver.");
     }
 }

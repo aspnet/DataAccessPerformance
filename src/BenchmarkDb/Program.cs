@@ -50,7 +50,7 @@ namespace BenchmarkDb
                 Console.WriteLine("Arguments:");
                 Console.WriteLine($"  <driver>            The target database driver ({string.Join(", ", _drivers.Keys.Select(k => $"'{k}'"))}).");
                 Console.WriteLine("  <connection-string> The target database connection string.");
-                Console.WriteLine($"  <variation>:        The specific variation to run ({string.Join(", ", DriverBase.VariationNames.Select(k => $"'{k}'"))}).");
+                Console.WriteLine($"  <variation>:        The specific variation to run ({string.Join(", ", Variation.Names.Select(k => $"'{k}'"))}).");
                 Console.WriteLine();
                 Console.WriteLine("Options:");
                 Console.WriteLine("  [threads]:   The number of threads to spawn (default 16).");
@@ -86,6 +86,7 @@ namespace BenchmarkDb
             }
 
             var variationName = args[2];
+
             var variation = driver.TryGetVariation(variationName);
 
             if (variation == null)

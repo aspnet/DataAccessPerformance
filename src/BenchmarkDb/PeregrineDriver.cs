@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Npgsql;
@@ -11,20 +10,7 @@ namespace BenchmarkDb
 {
     public sealed class PeregrineDriver : DriverBase
     {
-        public override Func<string, Task> TryGetVariation(string variationName)
-        {
-            switch (variationName)
-            {
-                case Variation.Async:
-                    return DoWorkAsync;
-                case Variation.AsyncCaching:
-                    return DoWorkAsyncCaching;
-            }
-
-            return default;
-        }
-
-        public static async Task DoWorkAsync(string connectionString)
+        public override async Task DoWorkAsync(string connectionString)
         {
             var npgsqConnectionStringBuilder
                 = new NpgsqlConnectionStringBuilder(connectionString);
@@ -73,7 +59,7 @@ namespace BenchmarkDb
             }
         }
 
-        public static async Task DoWorkAsyncCaching(string connectionString)
+        public override async Task DoWorkAsyncCaching(string connectionString)
         {
             var npgsqConnectionStringBuilder
                 = new NpgsqlConnectionStringBuilder(connectionString);
