@@ -132,12 +132,12 @@ namespace Peregrine.Tests
         }
 
         [Fact]
-        public async Task Execute_success()
+        public async Task Execute_query_no_parameters_success()
         {
             using (var session = new PGSession(Host, Port, Database, User, Password))
             {
                 await session.StartAsync();
-                await session.PrepareAsync("_p0", "select id, message from fortune");
+                await session.PrepareAsync("q", "select id, message from fortune");
 
                 var fortunes = new List<Fortune>();
 
@@ -163,9 +163,47 @@ namespace Peregrine.Tests
                     }
                 }
 
-                await session.ExecuteAsync("_p0", CreateFortune, BindColumn);
+                await session.ExecuteAsync("q", CreateFortune, BindColumn);
 
                 Assert.Equal(12, fortunes.Count);
+            }
+        }
+
+        [Fact]
+        public async Task Execute_query_parameter_success()
+        {
+            using (var session = new PGSession(Host, Port, Database, User, Password))
+            {
+                await session.StartAsync();
+                await session.PrepareAsync("q", "select id, randomnumber from world where id = $1");
+
+                World world = null;
+
+                World CreateWorld()
+                {
+                    world = new World();
+
+                    return world;
+                }
+
+                void BindColumn(World w, ReadBuffer readBuffer, int index, int _)
+                {
+                    switch (index)
+                    {
+                        case 0:
+                            w.Id = readBuffer.ReadInt();
+                            break;
+                        case 1:
+                            w.RandomNumber = readBuffer.ReadInt();
+                            break;
+                    }
+                }
+
+                await session.ExecuteAsync("q", CreateWorld, BindColumn, 45);
+
+                Assert.NotNull(world);
+                Assert.Equal(45, world.Id);
+                Assert.InRange(world.RandomNumber, 1, 10000);
             }
         }
 
@@ -173,6 +211,12 @@ namespace Peregrine.Tests
         {
             public int Id { get; set; }
             public string Message { get; set; }
+        }
+
+        public class World
+        {
+            public int Id { get; set; }
+            public int RandomNumber { get; set; }
         }
     }
 }

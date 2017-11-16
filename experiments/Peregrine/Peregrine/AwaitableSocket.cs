@@ -121,8 +121,18 @@ namespace Peregrine
 
         public void Dispose()
         {
+            if (_socket != null)
+            {
+                if (_socket.Connected)
+                {
+                    _socket.Shutdown(SocketShutdown.Both);
+                    _socket.Close();
+                }
+
+                _socket.Dispose();
+            }
+
             _socketAsyncEventArgs?.Dispose();
-            _socket?.Dispose();
         }
     }
 }

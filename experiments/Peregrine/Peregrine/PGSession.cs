@@ -82,7 +82,25 @@ namespace Peregrine
             }
         }
 
-        public async Task ExecuteAsync<TResult>(
+        public Task ExecuteAsync<TResult>(
+            string statementName,
+            Func<TResult> resultFactory,
+            Action<TResult, ReadBuffer, int, int> columnBinder,
+            int parameterValue)
+        {
+            ThrowIfDisposed();
+            ThrowIfNotConnected();
+
+            WriteExecStart(statementName, 1);
+
+            _writeBuffer
+                .WriteInt(4)
+                .WriteInt(parameterValue);
+
+            return WriteExecFinishAndProcess(resultFactory, columnBinder);
+        }
+
+        public Task ExecuteAsync<TResult>(
             string statementName,
             Func<TResult> resultFactory,
             Action<TResult, ReadBuffer, int, int> columnBinder)
@@ -90,12 +108,25 @@ namespace Peregrine
             ThrowIfDisposed();
             ThrowIfNotConnected();
 
-            await _writeBuffer
+            WriteExecStart(statementName, 0);
+
+            return WriteExecFinishAndProcess(resultFactory, columnBinder);
+        }
+
+        private void WriteExecStart(string statementName, short parameterCount)
+            => _writeBuffer
                 .StartMessage('B')
                 .WriteNull()
                 .WriteString(statementName)
-                .WriteShort(0)
-                .WriteShort(0)
+                .WriteShort(1)
+                .WriteShort(1)
+                .WriteShort(parameterCount);
+
+        private async Task WriteExecFinishAndProcess<TResult>(
+            Func<TResult> resultFactory,
+            Action<TResult, ReadBuffer, int, int> columnBinder)
+        {
+            await _writeBuffer
                 .WriteShort(1)
                 .WriteShort(1)
                 .EndMessage()
