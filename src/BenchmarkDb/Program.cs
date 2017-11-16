@@ -114,8 +114,6 @@ namespace BenchmarkDb
             var totalTransactions = 0;
             var results = new List<double>();
 
-            Interlocked.Exchange(ref _running, 1);
-
             IEnumerable<Task> CreateTasks()
             {
                 yield return Task.Run(
@@ -170,6 +168,13 @@ namespace BenchmarkDb
                 }
             }
 
+            if (variation == DriverBase.NotSupportedVariation)
+            {
+                return 0;
+            }
+
+            Interlocked.Exchange(ref _running, 1);
+
             await Task.WhenAll(CreateTasks());
 
             var totalTps = (int)(totalTransactions / (stopTime - startTime).TotalSeconds);
@@ -189,9 +194,9 @@ namespace BenchmarkDb
             var stdDev = CalculateStdDev(results);
 
             Console.SetCursorPosition(0, Console.CursorTop);
-            Console.WriteLine($"{threadCount:D2} Threads, tps: {totalTps:F2}, stddev(w/o best+worst): {stdDev:F2}");
+            Console.WriteLine($"{driverName} {variationName} {threadCount:D2} Threads, tps: {totalTps:F2}, stddev(w/o best+worst): {stdDev:F2}");
 
-            var desc = $"{driver}+{variationName}+{threadCount}";
+            var desc = $"{driverName}+{variationName}+{threadCount}";
 
             using (var sw = File.AppendText("results.md"))
             {

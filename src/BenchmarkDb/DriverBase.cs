@@ -9,6 +9,8 @@ namespace BenchmarkDb
 {
     public abstract class DriverBase
     {
+        public static Func<string, Task> NotSupportedVariation = _ => null;
+
         protected static void CheckResults(ICollection<Fortune> results)
         {
             if (results.Count != 12)
@@ -17,7 +19,7 @@ namespace BenchmarkDb
             }
         }
 
-        public Func<string, Task> TryGetVariation(string variationName)
+        public virtual Func<string, Task> TryGetVariation(string variationName)
         {
             switch (variationName)
             {
