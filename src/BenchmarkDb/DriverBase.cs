@@ -9,6 +9,8 @@ namespace BenchmarkDb
 {
     public abstract class DriverBase
     {
+        public static Func<string, Task> NotSupportedVariation = _ => null;
+
         protected static void CheckResults(ICollection<Fortune> results)
         {
             if (results.Count != 12)
@@ -17,7 +19,7 @@ namespace BenchmarkDb
             }
         }
 
-        public Func<string, Task> TryGetVariation(string variationName)
+        public virtual Func<string, Task> TryGetVariation(string variationName)
         {
             switch (variationName)
             {
@@ -29,41 +31,29 @@ namespace BenchmarkDb
                     return DoWorkAsync;
                 case Variation.AsyncCaching:
                     return DoWorkAsyncCaching;
-            }
-
-            return default;
-        }
-
-        public virtual async Task DoWorkSync(string connectionString)
-        {
-            while (Program.IsRunning)
-            {
-                await Task.Delay(100);
+                default:
+                    return null;
             }
         }
 
-        public virtual async Task DoWorkSyncCaching(string connectionString)
+        public virtual Task DoWorkSync(string connectionString)
         {
-            while (Program.IsRunning)
-            {
-                await Task.Delay(100);
-            }
+            throw VariationNotSupported(Variation.Sync);
         }
 
-        public virtual async Task DoWorkAsync(string connectionString)
+        public virtual Task DoWorkSyncCaching(string connectionString)
         {
-            while (Program.IsRunning)
-            {
-                await Task.Delay(100);
-            }
+            throw VariationNotSupported(Variation.SyncCaching);
         }
 
-        public virtual async Task DoWorkAsyncCaching(string connectionString)
+        public virtual Task DoWorkAsync(string connectionString)
         {
-            while (Program.IsRunning)
-            {
-                await Task.Delay(100);
-            }
+            throw VariationNotSupported(Variation.Async);
+        }
+
+        public virtual Task DoWorkAsyncCaching(string connectionString)
+        {
+            throw VariationNotSupported(Variation.AsyncCaching);
         }
 
         private static Exception VariationNotSupported(string variationName)
