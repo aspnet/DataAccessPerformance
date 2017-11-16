@@ -12,6 +12,14 @@ namespace BenchmarkDb
     {
         public override async Task DoWorkAsync(string connectionString)
         {
+            // Ingnoring this scenario until it's fixed
+            while (Program.IsRunning)
+            {
+                await Task.Delay(100);
+            }
+
+            return;
+
             var npgsqConnectionStringBuilder
                 = new NpgsqlConnectionStringBuilder(connectionString);
 

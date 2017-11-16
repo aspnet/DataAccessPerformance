@@ -34,24 +34,36 @@ namespace BenchmarkDb
             return default;
         }
 
-        public virtual Task DoWorkSync(string connectionString)
+        public virtual async Task DoWorkSync(string connectionString)
         {
-            throw VariationNotSupported(Variation.Sync);
+            while (Program.IsRunning)
+            {
+                await Task.Delay(100);
+            }
         }
 
-        public virtual Task DoWorkSyncCaching(string connectionString)
+        public virtual async Task DoWorkSyncCaching(string connectionString)
         {
-            throw VariationNotSupported(Variation.SyncCaching);
+            while (Program.IsRunning)
+            {
+                await Task.Delay(100);
+            }
         }
 
-        public virtual Task DoWorkAsync(string connectionString)
+        public virtual async Task DoWorkAsync(string connectionString)
         {
-            throw VariationNotSupported(Variation.Async);
+            while (Program.IsRunning)
+            {
+                await Task.Delay(100);
+            }
         }
 
-        public virtual Task DoWorkAsyncCaching(string connectionString)
+        public virtual async Task DoWorkAsyncCaching(string connectionString)
         {
-            throw VariationNotSupported(Variation.AsyncCaching);
+            while (Program.IsRunning)
+            {
+                await Task.Delay(100);
+            }
         }
 
         private static Exception VariationNotSupported(string variationName)
