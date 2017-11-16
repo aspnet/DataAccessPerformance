@@ -109,6 +109,8 @@ namespace BenchmarkDb
                 return Help(("time", args[4]));
             }
 
+            driver.Initialize(connectionString, threadCount);
+
             DateTime startTime = default, stopTime = default;
 
             var totalTransactions = 0;
@@ -159,10 +161,7 @@ namespace BenchmarkDb
                         });
 
                 foreach (var task in Enumerable.Range(0, threadCount)
-                    .Select(
-                        _ => Task.Factory
-                            .StartNew(() => variation(connectionString), TaskCreationOptions.LongRunning)
-                            .Unwrap()))
+                    .Select(_ => Task.Factory.StartNew(variation, TaskCreationOptions.LongRunning).Unwrap()))
                 {
                     yield return task;
                 }
@@ -170,6 +169,8 @@ namespace BenchmarkDb
 
             if (variation == DriverBase.NotSupportedVariation)
             {
+                Console.WriteLine($"Driver '{driverName}' does not support variation '{variationName}'.");
+
                 return 0;
             }
 
@@ -207,6 +208,8 @@ namespace BenchmarkDb
             {
                 sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{stdDev:F0}");
             }
+
+            (driver as IDisposable)?.Dispose();
 
             return 0;
         }

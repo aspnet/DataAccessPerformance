@@ -139,13 +139,11 @@ namespace Peregrine.Tests
                 await session.StartAsync();
                 await session.PrepareAsync("q", "select id, message from fortune");
 
-                var fortunes = new List<Fortune>();
-
-                Fortune CreateFortune()
+                Fortune CreateFortune(List<Fortune> results)
                 {
                     var fortune = new Fortune();
 
-                    fortunes.Add(fortune);
+                    results.Add(fortune);
 
                     return fortune;
                 }
@@ -163,7 +161,9 @@ namespace Peregrine.Tests
                     }
                 }
 
-                await session.ExecuteAsync("q", CreateFortune, BindColumn);
+                var fortunes = new List<Fortune>();
+
+                await session.ExecuteAsync("q", fortunes, CreateFortune, BindColumn);
 
                 Assert.Equal(12, fortunes.Count);
             }

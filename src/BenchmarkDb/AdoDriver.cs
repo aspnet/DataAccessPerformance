@@ -10,13 +10,19 @@ namespace BenchmarkDb
     public sealed class AdoDriver : DriverBase
     {
         private readonly DbProviderFactory _providerFactory;
+        private string _connectionString;
 
         public AdoDriver(DbProviderFactory providerFactory)
         {
             _providerFactory = providerFactory;
         }
 
-        public override Task DoWorkSync(string connectionString)
+        public override void Initialize(string connectionString, int _)
+        {
+            _connectionString = connectionString;
+        }
+
+        public override Task DoWorkSync()
         {
             while (Program.IsRunning)
             {
@@ -24,7 +30,7 @@ namespace BenchmarkDb
 
                 using (var connection = _providerFactory.CreateConnection())
                 {
-                    connection.ConnectionString = connectionString;
+                    connection.ConnectionString = _connectionString;
                     connection.Open();
 
                     using (var command = connection.CreateCommand())
@@ -55,13 +61,13 @@ namespace BenchmarkDb
             return Task.CompletedTask;
         }
 
-        public override Task DoWorkSyncCaching(string connectionString)
+        public override Task DoWorkSyncCaching()
         {
             using (var connection = _providerFactory.CreateConnection())
             {
                 using (var command = connection.CreateCommand())
                 {
-                    connection.ConnectionString = connectionString;
+                    connection.ConnectionString = _connectionString;
                     connection.Open();
 
                     command.CommandText = Program.TestQuery;
@@ -94,7 +100,7 @@ namespace BenchmarkDb
             return Task.CompletedTask;
         }
 
-        public override async Task DoWorkAsync(string connectionString)
+        public override async Task DoWorkAsync()
         {
             while (Program.IsRunning)
             {
@@ -102,7 +108,7 @@ namespace BenchmarkDb
 
                 using (var connection = _providerFactory.CreateConnection())
                 {
-                    connection.ConnectionString = connectionString;
+                    connection.ConnectionString = _connectionString;
 
                     await connection.OpenAsync();
 
@@ -132,13 +138,13 @@ namespace BenchmarkDb
             }
         }
 
-        public override async Task DoWorkAsyncCaching(string connectionString)
+        public override async Task DoWorkAsyncCaching()
         {
             using (var connection = _providerFactory.CreateConnection())
             {
                 using (var command = connection.CreateCommand())
                 {
-                    connection.ConnectionString = connectionString;
+                    connection.ConnectionString = _connectionString;
 
                     await connection.OpenAsync();
 

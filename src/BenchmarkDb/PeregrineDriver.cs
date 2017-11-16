@@ -9,12 +9,16 @@ using Peregrine;
 
 namespace BenchmarkDb
 {
-    public sealed class PeregrineDriver : DriverBase
+    public sealed class PeregrineDriver : DriverBase, IDisposable
     {
-        public override Func<string, Task> TryGetVariation(string variationName)
+        private PGSessionPool _sessionPool;
+
+        public override Func<Task> TryGetVariation(string variationName)
         {
             switch (variationName)
             {
+                case Variation.Async:
+                    return DoWorkAsync;
                 case Variation.AsyncCaching:
                     return DoWorkAsyncCaching;
                 default:
@@ -22,47 +26,61 @@ namespace BenchmarkDb
             }
         }
 
-        public override async Task DoWorkAsync(string connectionString)
+        public override void Initialize(string connectionString, int threadCount)
         {
-            var npgsqConnectionStringBuilder
+            var connectionStringBuilder
                 = new NpgsqlConnectionStringBuilder(connectionString);
 
+            _sessionPool
+                = new PGSessionPool(
+                    connectionStringBuilder.Host,
+                    connectionStringBuilder.Port,
+                    connectionStringBuilder.Database,
+                    connectionStringBuilder.Username,
+                    connectionStringBuilder.Password,
+                    threadCount)
+                {
+                    OnCreate = async s => await s.PrepareAsync("q", "select id, message from fortune")
+                };
+        }
+
+        private static Fortune CreateFortune(List<Fortune> results)
+        {
+            var fortune = new Fortune();
+
+            results.Add(fortune);
+
+            return fortune;
+        }
+
+        private static void BindColumn(Fortune fortune, ReadBuffer readBuffer, int index, int length)
+        {
+            switch (index)
+            {
+                case 0:
+                    fortune.Id = readBuffer.ReadInt();
+                    break;
+                case 1:
+                    fortune.Message = readBuffer.ReadString(length);
+                    break;
+            }
+        }
+
+        public override async Task DoWorkAsync()
+        {
             while (Program.IsRunning)
             {
                 var results = new List<Fortune>();
 
-                Fortune CreateFortune()
+                var session = await _sessionPool.Rent();
+
+                try
                 {
-                    var fortune = new Fortune();
-
-                    results.Add(fortune);
-
-                    return fortune;
+                    await session.ExecuteAsync("q", results, CreateFortune, BindColumn);
                 }
-
-                void BindColumn(Fortune fortune, ReadBuffer readBuffer, int index, int length)
+                finally
                 {
-                    switch (index)
-                    {
-                        case 0:
-                            fortune.Id = readBuffer.ReadInt();
-                            break;
-                        case 1:
-                            fortune.Message = readBuffer.ReadString(length);
-                            break;
-                    }
-                }
-
-                using (var session = new PGSession(
-                    npgsqConnectionStringBuilder.Host,
-                    npgsqConnectionStringBuilder.Port,
-                    npgsqConnectionStringBuilder.Database,
-                    npgsqConnectionStringBuilder.Username,
-                    npgsqConnectionStringBuilder.Password))
-                {
-                    await session.StartAsync();
-                    await session.PrepareAsync("_p0", "select id, message from fortune");
-                    await session.ExecuteAsync("_p0", CreateFortune, BindColumn);
+                    _sessionPool.Return(session);
                 }
 
                 CheckResults(results);
@@ -71,54 +89,32 @@ namespace BenchmarkDb
             }
         }
 
-        public override async Task DoWorkAsyncCaching(string connectionString)
+        public override async Task DoWorkAsyncCaching()
         {
-            var npgsqConnectionStringBuilder
-                = new NpgsqlConnectionStringBuilder(connectionString);
+            var session = await _sessionPool.Rent();
 
-            using (var session = new PGSession(
-                npgsqConnectionStringBuilder.Host,
-                npgsqConnectionStringBuilder.Port,
-                npgsqConnectionStringBuilder.Database,
-                npgsqConnectionStringBuilder.Username,
-                npgsqConnectionStringBuilder.Password))
+            try
             {
-                await session.StartAsync();
-                await session.PrepareAsync("_p0", "select id, message from fortune");
-
                 while (Program.IsRunning)
                 {
                     var results = new List<Fortune>();
 
-                    Fortune CreateFortune()
-                    {
-                        var fortune = new Fortune();
-
-                        results.Add(fortune);
-
-                        return fortune;
-                    }
-
-                    void BindColumn(Fortune fortune, ReadBuffer readBuffer, int index, int length)
-                    {
-                        switch (index)
-                        {
-                            case 0:
-                                fortune.Id = readBuffer.ReadInt();
-                                break;
-                            case 1:
-                                fortune.Message = readBuffer.ReadString(length);
-                                break;
-                        }
-                    }
-
-                    await session.ExecuteAsync("_p0", CreateFortune, BindColumn);
+                    await session.ExecuteAsync("q", results, CreateFortune, BindColumn);
 
                     CheckResults(results);
 
                     Program.IncrementCounter();
                 }
             }
+            finally
+            {
+                _sessionPool.Return(session);
+            }
+        }
+
+        public void Dispose()
+        {
+            _sessionPool?.Dispose();
         }
     }
 }

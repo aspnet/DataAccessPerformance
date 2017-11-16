@@ -97,12 +97,13 @@ namespace Peregrine
                 .WriteInt(4)
                 .WriteInt(parameterValue);
 
-            return WriteExecFinishAndProcess(resultFactory, columnBinder);
+            return WriteExecFinishAndProcess<object, TResult>(null, _ => resultFactory(), columnBinder);
         }
 
-        public Task ExecuteAsync<TResult>(
+        public Task ExecuteAsync<TState, TResult>(
             string statementName,
-            Func<TResult> resultFactory,
+            TState initialState,
+            Func<TState, TResult> resultFactory,
             Action<TResult, ReadBuffer, int, int> columnBinder)
         {
             ThrowIfDisposed();
@@ -110,7 +111,7 @@ namespace Peregrine
 
             WriteExecStart(statementName, 0);
 
-            return WriteExecFinishAndProcess(resultFactory, columnBinder);
+            return WriteExecFinishAndProcess(initialState, resultFactory, columnBinder);
         }
 
         private void WriteExecStart(string statementName, short parameterCount)
@@ -122,8 +123,9 @@ namespace Peregrine
                 .WriteShort(1)
                 .WriteShort(parameterCount);
 
-        private async Task WriteExecFinishAndProcess<TResult>(
-            Func<TResult> resultFactory,
+        private async Task WriteExecFinishAndProcess<TState, TResult>(
+            TState initialState,
+            Func<TState, TResult> resultFactory,
             Action<TResult, ReadBuffer, int, int> columnBinder)
         {
             await _writeBuffer
@@ -153,7 +155,7 @@ namespace Peregrine
                 {
                     var result
                         = resultFactory != null
-                            ? resultFactory()
+                            ? resultFactory(initialState)
                             : default;
 
                     var columns = _readBuffer.ReadShort();

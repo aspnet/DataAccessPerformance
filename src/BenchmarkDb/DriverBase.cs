@@ -9,7 +9,7 @@ namespace BenchmarkDb
 {
     public abstract class DriverBase
     {
-        public static Func<string, Task> NotSupportedVariation = _ => null;
+        public static Func<Task> NotSupportedVariation = () => null;
 
         protected static void CheckResults(ICollection<Fortune> results)
         {
@@ -19,7 +19,7 @@ namespace BenchmarkDb
             }
         }
 
-        public virtual Func<string, Task> TryGetVariation(string variationName)
+        public virtual Func<Task> TryGetVariation(string variationName)
         {
             switch (variationName)
             {
@@ -36,22 +36,24 @@ namespace BenchmarkDb
             return default;
         }
 
-        public virtual Task DoWorkSync(string connectionString)
+        public abstract void Initialize(string connectionString, int threadCount);
+
+        public virtual Task DoWorkSync()
         {
             throw VariationNotSupported(Variation.Sync);
         }
 
-        public virtual Task DoWorkSyncCaching(string connectionString)
+        public virtual Task DoWorkSyncCaching()
         {
             throw VariationNotSupported(Variation.SyncCaching);
         }
 
-        public virtual Task DoWorkAsync(string connectionString)
+        public virtual Task DoWorkAsync()
         {
             throw VariationNotSupported(Variation.Async);
         }
 
-        public virtual Task DoWorkAsyncCaching(string connectionString)
+        public virtual Task DoWorkAsyncCaching()
         {
             throw VariationNotSupported(Variation.AsyncCaching);
         }
