@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BenchmarkDb.Pooling;
 using MySql.Data.MySqlClient;
 using Npgsql;
 
@@ -29,13 +31,13 @@ namespace BenchmarkDb
 
         public static bool IsRunning => _running == 1;
 
-        private static readonly IDictionary<string, DriverBase> _drivers
-            = new Dictionary<string, DriverBase>
+        private static readonly IDictionary<string, Func<bool, DriverBase>> _drivers
+            = new Dictionary<string, Func<bool, DriverBase>>
             {
-                { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
-                { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
-                { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
-                { "peregrine", new PeregrineDriver() }
+                { "ado-npgsql", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(NpgsqlFactory.Instance) : NpgsqlFactory.Instance) },
+                { "ado-mysql", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(MySqlClientFactory.Instance) : MySqlClientFactory.Instance) },
+                { "ado-sqlclient", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(SqlClientFactory.Instance) : SqlClientFactory.Instance) },
+                { "peregrine", pool => new PeregrineDriver() }
             };
 
         public static async Task<int> Main(string[] args)
@@ -45,7 +47,7 @@ namespace BenchmarkDb
 #endif
             int Help((string option, string value) invalid = default)
             {
-                Console.WriteLine("Usage: <driver> <connection-string> [threads] [variation] [time]");
+                Console.WriteLine("Usage: <driver> <connection-string> [threads] [variation] [time] [pooling]");
                 Console.WriteLine();
                 Console.WriteLine("Arguments:");
                 Console.WriteLine($"  <driver>            The target database driver ({string.Join(", ", _drivers.Keys.Select(k => $"'{k}'"))}).");
@@ -55,6 +57,7 @@ namespace BenchmarkDb
                 Console.WriteLine("Options:");
                 Console.WriteLine("  [threads]:   The number of threads to spawn (default 16).");
                 Console.WriteLine("  [time]:      The number of seconds to run for (default 10).");
+                Console.WriteLine("  [pooling]:   Whether the connections should be pooled (default false).");
                 Console.WriteLine();
 
                 if (invalid.option != null)
@@ -85,9 +88,17 @@ namespace BenchmarkDb
                 return Help(("connection-string", connectionString));
             }
 
+            bool pool = false;
+
+            if (args.Length > 5
+                && !bool.TryParse(args[5], out pool))
+            {
+                return Help(("pool", args[5]));
+            }
+
             var variationName = args[2];
 
-            var variation = driver.TryGetVariation(variationName);
+            var variation = driver(pool).TryGetVariation(variationName);
 
             if (variation == null)
             {
@@ -200,12 +211,12 @@ namespace BenchmarkDb
 
             using (var sw = File.AppendText("results.md"))
             {
-                sw.WriteLine($"|{desc}|{variationName}|{threadCount:D2}|{totalTps:F0}|{stdDev:F0}|");
+                sw.WriteLine($"|{desc}|{variationName}|{threadCount:D2}|{totalTps:F0}|{pool}|{stdDev:F0}");
             }
 
             using (var sw = File.AppendText("results.csv"))
             {
-                sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{stdDev:F0}");
+                sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{pool},{stdDev:F0}");
             }
 
             return 0;
