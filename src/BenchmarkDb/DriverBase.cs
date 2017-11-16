@@ -31,9 +31,9 @@ namespace BenchmarkDb
                     return DoWorkAsync;
                 case Variation.AsyncCaching:
                     return DoWorkAsyncCaching;
-                default:
-                    return null;
             }
+
+            return default;
         }
 
         public virtual Task DoWorkSync(string connectionString)
