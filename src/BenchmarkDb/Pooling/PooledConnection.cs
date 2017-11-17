@@ -1,14 +1,15 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Data.Common;
-using Microsoft.Extensions.ObjectPool;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BenchmarkDb.Pooling
 {
-    public class PooledConnection : DbConnection
+    public class PooledConnection : DbConnection, IDisposable
     {
         private readonly DbConnection _dbConnection;
         private readonly ObjectPool<DbConnection> _objectPool;
-        private readonly PoolingDbFactory _poolingDbFactory;
 
         public PooledConnection(DbConnection dbConnection, ObjectPool<DbConnection> objectPool)
         {
@@ -16,12 +17,18 @@ namespace BenchmarkDb.Pooling
             _objectPool = objectPool;
         }
 
-        ~PooledConnection()
+        public override string ConnectionString
         {
-            _dbConnection.Dispose();
-        }
+            get => _dbConnection.ConnectionString;
 
-        public override string ConnectionString { get => _dbConnection.ConnectionString; set => _dbConnection.ConnectionString = value; }
+            set
+            {
+                if (String.IsNullOrEmpty(_dbConnection.ConnectionString))
+                {
+                    _dbConnection.ConnectionString = value;
+                }
+            }
+        }
 
         public override string Database => _dbConnection.Database;
 
@@ -38,17 +45,31 @@ namespace BenchmarkDb.Pooling
 
         public override void Close()
         {
-            _objectPool.Return(_dbConnection);
+            //Console.WriteLine("Close()");
+        }
+
+        public override Task OpenAsync(CancellationToken cancellationToken)
+        {
+            //Console.WriteLine("OpenAsync()");
+            if (State != ConnectionState.Open)
+            {
+                // Console.WriteLine("_dbConnection.Open()");
+                return _dbConnection.OpenAsync();
+            }
+
+            return Task.CompletedTask;
         }
 
         public override void Open()
         {
+            //Console.WriteLine("Open()");
             if (State != ConnectionState.Open)
             {
+                // Console.WriteLine("_dbConnection.Open()");
                 _dbConnection.Open();
             }
         }
-
+        
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
         {
             return _dbConnection.BeginTransaction();
@@ -57,6 +78,12 @@ namespace BenchmarkDb.Pooling
         protected override DbCommand CreateDbCommand()
         {
             return _dbConnection.CreateCommand();
+        }
+
+        void IDisposable.Dispose()
+        {
+            //Console.WriteLine("Returned()");
+            _objectPool.Return(_dbConnection);
         }
     }
 }

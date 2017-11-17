@@ -1,6 +1,4 @@
-﻿using System.Data;
-using System.Data.Common;
-using Microsoft.Extensions.ObjectPool;
+﻿using System.Data.Common;
 
 namespace BenchmarkDb.Pooling
 {
@@ -9,10 +7,10 @@ namespace BenchmarkDb.Pooling
         private readonly DbProviderFactory _dbProviderFactory;
         private readonly ObjectPool<DbConnection> _connectionPool;
 
-        public PoolingDbFactory(DbProviderFactory dbProviderFactory)
+        public PoolingDbFactory(DbProviderFactory dbProviderFactory, int pool)
         {
             _dbProviderFactory = dbProviderFactory;
-            _connectionPool = new DefaultObjectPoolProvider().Create(new ConnectionPoolingPolicy(dbProviderFactory));
+            _connectionPool = new ObjectPool<DbConnection>(pool, () => dbProviderFactory.CreateConnection());
         }
 
         public override DbParameter CreateParameter()
@@ -44,6 +42,7 @@ namespace BenchmarkDb.Pooling
 
         public override DbConnection CreateConnection()
         {
+            //Console.WriteLine("CreateConnection()");
             var connection = _connectionPool.Get();
             var pooledConnection = new PooledConnection(connection, _connectionPool);
 

@@ -31,12 +31,12 @@ namespace BenchmarkDb
 
         public static bool IsRunning => _running == 1;
 
-        private static readonly IDictionary<string, Func<bool, DriverBase>> _drivers
-            = new Dictionary<string, Func<bool, DriverBase>>
+        private static readonly IDictionary<string, Func<int, DriverBase>> _drivers
+            = new Dictionary<string, Func<int, DriverBase>>
             {
-                { "ado-npgsql", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(NpgsqlFactory.Instance) : NpgsqlFactory.Instance) },
-                { "ado-mysql", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(MySqlClientFactory.Instance) : MySqlClientFactory.Instance) },
-                { "ado-sqlclient", pool => new AdoDriver(pool ? (DbProviderFactory) new PoolingDbFactory(SqlClientFactory.Instance) : SqlClientFactory.Instance) },
+                { "ado-npgsql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(NpgsqlFactory.Instance, pool * 2) : NpgsqlFactory.Instance) },
+                { "ado-mysql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(MySqlClientFactory.Instance, pool * 2) : MySqlClientFactory.Instance) },
+                { "ado-sqlclient", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(SqlClientFactory.Instance, pool * 2) : SqlClientFactory.Instance) },
                 { "peregrine", pool => new PeregrineDriver() }
             };
 
@@ -96,15 +96,6 @@ namespace BenchmarkDb
                 return Help(("pool", args[5]));
             }
 
-            var variationName = args[2];
-
-            var variation = driver(pool).TryGetVariation(variationName);
-
-            if (variation == null)
-            {
-                return Help(("variation", variationName));
-            }
-
             var threadCount = DefaultThreadCount;
             var time = DefaultExecutionTimeSeconds;
 
@@ -112,6 +103,15 @@ namespace BenchmarkDb
                 && !int.TryParse(args[3], out threadCount))
             {
                 return Help(("threads", args[3]));
+            }
+
+            var variationName = args[2];
+
+            var variation = driver(threadCount).TryGetVariation(variationName);
+
+            if (variation == null)
+            {
+                return Help(("variation", variationName));
             }
 
             if (args.Length > 4
