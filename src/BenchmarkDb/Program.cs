@@ -34,9 +34,9 @@ namespace BenchmarkDb
         private static readonly IDictionary<string, Func<int, DriverBase>> _drivers
             = new Dictionary<string, Func<int, DriverBase>>
             {
-                { "ado-npgsql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(NpgsqlFactory.Instance, pool * 2) : NpgsqlFactory.Instance) },
-                { "ado-mysql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(MySqlClientFactory.Instance, pool * 2) : MySqlClientFactory.Instance) },
-                { "ado-sqlclient", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(SqlClientFactory.Instance, pool * 2) : SqlClientFactory.Instance) },
+                { "ado-npgsql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(NpgsqlFactory.Instance, pool) : NpgsqlFactory.Instance) },
+                { "ado-mysql", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(MySqlClientFactory.Instance, pool) : MySqlClientFactory.Instance) },
+                { "ado-sqlclient", pool => new AdoDriver(pool > 0 ? (DbProviderFactory) new PoolingDbFactory(SqlClientFactory.Instance, pool) : SqlClientFactory.Instance) },
                 { "peregrine", pool => new PeregrineDriver() }
             };
 
@@ -57,7 +57,7 @@ namespace BenchmarkDb
                 Console.WriteLine("Options:");
                 Console.WriteLine("  [threads]:   The number of threads to spawn (default 16).");
                 Console.WriteLine("  [time]:      The number of seconds to run for (default 10).");
-                Console.WriteLine("  [pooling]:   Whether the connections should be pooled (default false).");
+                Console.WriteLine("  [poolsize]:   The size of the connection pool (default 0).");
                 Console.WriteLine();
 
                 if (invalid.option != null)
@@ -88,12 +88,12 @@ namespace BenchmarkDb
                 return Help(("connection-string", connectionString));
             }
 
-            bool pool = false;
+            var poolSize = 0;
 
             if (args.Length > 5
-                && !bool.TryParse(args[5], out pool))
+                && !int.TryParse(args[5], out poolSize))
             {
-                return Help(("pool", args[5]));
+                return Help(("poolsize", args[5]));
             }
 
             var threadCount = DefaultThreadCount;
@@ -107,7 +107,7 @@ namespace BenchmarkDb
 
             var variationName = args[2];
 
-            var variation = driver(threadCount).TryGetVariation(variationName);
+            var variation = driver(poolSize).TryGetVariation(variationName);
 
             if (variation == null)
             {
@@ -211,12 +211,12 @@ namespace BenchmarkDb
 
             using (var sw = File.AppendText("results.md"))
             {
-                sw.WriteLine($"|{desc}|{variationName}|{threadCount:D2}|{totalTps:F0}|{pool}|{stdDev:F0}");
+                sw.WriteLine($"|{desc}|{variationName}|{threadCount:D2}|{totalTps:F0}|{poolSize}|{stdDev:F0}");
             }
 
             using (var sw = File.AppendText("results.csv"))
             {
-                sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{pool},{stdDev:F0}");
+                sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{poolSize},{stdDev:F0}");
             }
 
             return 0;
