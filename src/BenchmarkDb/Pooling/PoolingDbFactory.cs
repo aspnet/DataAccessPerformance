@@ -5,12 +5,17 @@ namespace BenchmarkDb.Pooling
     public class PoolingDbFactory : DbProviderFactory
     {
         private readonly DbProviderFactory _dbProviderFactory;
-        private readonly ObjectPool<DbConnection> _connectionPool;
+        private readonly ObjectPool<PooledConnection> _connectionPool;
 
         public PoolingDbFactory(DbProviderFactory dbProviderFactory, int pool)
         {
             _dbProviderFactory = dbProviderFactory;
-            _connectionPool = new ObjectPool<DbConnection>(pool, () => dbProviderFactory.CreateConnection());
+            _connectionPool = new ObjectPool<PooledConnection>(pool, () => CreatePooledConnection(dbProviderFactory.CreateConnection()));
+        }
+
+        private PooledConnection CreatePooledConnection(DbConnection connection)
+        {
+            return new PooledConnection(connection, _connectionPool);
         }
 
         public override DbParameter CreateParameter()
@@ -42,11 +47,7 @@ namespace BenchmarkDb.Pooling
 
         public override DbConnection CreateConnection()
         {
-            //Console.WriteLine("CreateConnection()");
-            var connection = _connectionPool.Get();
-            var pooledConnection = new PooledConnection(connection, _connectionPool);
-
-            return pooledConnection;
+            return _connectionPool.Get();
         }
 
         public override DbCommand CreateCommand()

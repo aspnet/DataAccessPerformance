@@ -33,15 +33,17 @@ namespace BenchmarkDb.Pooling
             return _factory();
         }
 
-        public void Return(T obj)
+        public bool Return(T obj)
         {
             for (var i = 0; i < _items.Length; i++)
             {
                 if (Interlocked.CompareExchange(ref _items[i], obj, null) == null)
                 {
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
     }
 }

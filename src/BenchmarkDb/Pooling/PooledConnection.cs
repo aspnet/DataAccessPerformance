@@ -9,9 +9,9 @@ namespace BenchmarkDb.Pooling
     public class PooledConnection : DbConnection, IDisposable
     {
         private readonly DbConnection _dbConnection;
-        private readonly ObjectPool<DbConnection> _objectPool;
+        private readonly ObjectPool<PooledConnection> _objectPool;
 
-        public PooledConnection(DbConnection dbConnection, ObjectPool<DbConnection> objectPool)
+        public PooledConnection(DbConnection dbConnection, ObjectPool<PooledConnection> objectPool)
         {
             _dbConnection = dbConnection;
             _objectPool = objectPool;
@@ -45,15 +45,13 @@ namespace BenchmarkDb.Pooling
 
         public override void Close()
         {
-            //Console.WriteLine("Close()");
+            // Don't close the underlying connection
         }
 
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
-            //Console.WriteLine("OpenAsync()");
             if (State != ConnectionState.Open)
             {
-                // Console.WriteLine("_dbConnection.Open()");
                 return _dbConnection.OpenAsync();
             }
 
@@ -62,10 +60,9 @@ namespace BenchmarkDb.Pooling
 
         public override void Open()
         {
-            //Console.WriteLine("Open()");
+            // The underlying connection might already be open
             if (State != ConnectionState.Open)
             {
-                // Console.WriteLine("_dbConnection.Open()");
                 _dbConnection.Open();
             }
         }
@@ -82,8 +79,10 @@ namespace BenchmarkDb.Pooling
 
         void IDisposable.Dispose()
         {
-            //Console.WriteLine("Returned()");
-            _objectPool.Return(_dbConnection);
+            if (!_objectPool.Return(this))
+            {
+                _dbConnection.Dispose();
+            }
         }
     }
 }
