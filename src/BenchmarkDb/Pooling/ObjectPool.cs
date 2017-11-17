@@ -30,7 +30,6 @@ namespace BenchmarkDb.Pooling
                 }
             }
 
-            Console.WriteLine("Create");
             return _factory();
         }
 
