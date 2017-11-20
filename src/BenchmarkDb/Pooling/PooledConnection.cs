@@ -9,12 +9,12 @@ namespace BenchmarkDb.Pooling
     public class PooledConnection : DbConnection, IDisposable
     {
         private readonly DbConnection _dbConnection;
-        private readonly ObjectPool<PooledConnection> _objectPool;
-
-        public PooledConnection(DbConnection dbConnection, ObjectPool<PooledConnection> objectPool)
+        private readonly ObjectPool<PooledConnection> _connectionPool;
+        
+        public PooledConnection(DbConnection dbConnection, ObjectPool<PooledConnection> connectionPool)
         {
             _dbConnection = dbConnection;
-            _objectPool = objectPool;
+            _connectionPool = connectionPool;
         }
 
         public override string ConnectionString
@@ -30,6 +30,7 @@ namespace BenchmarkDb.Pooling
             }
         }
 
+        public int Position { get; set; }
         public override string Database => _dbConnection.Database;
 
         public override string DataSource => _dbConnection.DataSource;
@@ -79,7 +80,7 @@ namespace BenchmarkDb.Pooling
 
         void IDisposable.Dispose()
         {
-            if (!_objectPool.Return(this))
+            if (!_connectionPool.Free(this))
             {
                 _dbConnection.Dispose();
             }
