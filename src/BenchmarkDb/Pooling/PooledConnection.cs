@@ -81,7 +81,7 @@ namespace BenchmarkDb.Pooling
 
         void IDisposable.Dispose()
         {
-            if (!_connectionPool.Free(this))
+            if (!_connectionPool.Return(this))
             {
                 _dbConnection.Dispose();
                 _disposed = true;

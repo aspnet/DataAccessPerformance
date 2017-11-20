@@ -47,7 +47,7 @@ namespace BenchmarkDb.Pooling
 
         public override DbConnection CreateConnection()
         {
-            return _connectionPool.Allocate();
+            return _connectionPool.Get();
         }
 
         public override DbCommand CreateCommand()
