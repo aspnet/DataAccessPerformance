@@ -10,7 +10,8 @@ namespace BenchmarkDb.Pooling
     {
         private readonly DbConnection _dbConnection;
         private readonly ObjectPool<PooledConnection> _connectionPool;
-        
+        private bool _disposed = true;
+
         public PooledConnection(DbConnection dbConnection, ObjectPool<PooledConnection> connectionPool)
         {
             _dbConnection = dbConnection;
@@ -81,6 +82,16 @@ namespace BenchmarkDb.Pooling
         void IDisposable.Dispose()
         {
             if (!_connectionPool.Free(this))
+            {
+                _dbConnection.Dispose();
+                _disposed = true;
+                GC.SuppressFinalize(this);
+            }
+        }
+
+        ~PooledConnection()
+        {
+            if (!_disposed)
             {
                 _dbConnection.Dispose();
             }
