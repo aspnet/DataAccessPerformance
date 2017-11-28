@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace BenchmarkDb
 {
-    public sealed class AdoDriver : DriverBase
+    public class AdoDriver : DriverBase
     {
-        private readonly DbProviderFactory _providerFactory;
-        private string _connectionString;
+        protected readonly DbProviderFactory _providerFactory;
+        protected string _connectionString;
 
         public AdoDriver(DbProviderFactory providerFactory)
         {
@@ -65,11 +65,11 @@ namespace BenchmarkDb
         {
             using (var connection = _providerFactory.CreateConnection())
             {
+                connection.ConnectionString = _connectionString;
+                connection.Open();
+
                 using (var command = connection.CreateCommand())
                 {
-                    connection.ConnectionString = _connectionString;
-                    connection.Open();
-
                     command.CommandText = Program.TestQuery;
                     command.Prepare();
 
@@ -142,12 +142,12 @@ namespace BenchmarkDb
         {
             using (var connection = _providerFactory.CreateConnection())
             {
+                connection.ConnectionString = _connectionString;
+
+                await connection.OpenAsync();
+
                 using (var command = connection.CreateCommand())
                 {
-                    connection.ConnectionString = _connectionString;
-
-                    await connection.OpenAsync();
-
                     command.CommandText = Program.TestQuery;
                     command.Prepare();
 

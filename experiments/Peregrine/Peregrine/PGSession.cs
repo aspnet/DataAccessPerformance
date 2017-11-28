@@ -67,7 +67,7 @@ namespace Peregrine
 
             await _readBuffer.ReceiveAsync();
 
-            var message = ReadMessage();
+            var message = _readBuffer.ReadMessage();
 
             switch (message.Type)
             {
@@ -75,12 +75,24 @@ namespace Peregrine
                     break;
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(ReadErrorMessage());
+                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
                     throw new NotImplementedException(message.Type.ToString());
             }
         }
+
+        public Task ExecuteAsync(string statementName)
+        {
+            ThrowIfDisposed();
+            ThrowIfNotConnected();
+
+            WriteExecStart(statementName, parameterCount: 0);
+
+            return WriteExecFinish();
+        }
+
+        internal ReadBuffer ReadBuffer => _readBuffer;
 
         public Task ExecuteAsync<TResult>(
             string statementName,
@@ -91,7 +103,7 @@ namespace Peregrine
             ThrowIfDisposed();
             ThrowIfNotConnected();
 
-            WriteExecStart(statementName, 1);
+            WriteExecStart(statementName, parameterCount: 1);
 
             _writeBuffer
                 .WriteInt(4)
@@ -109,7 +121,7 @@ namespace Peregrine
             ThrowIfDisposed();
             ThrowIfNotConnected();
 
-            WriteExecStart(statementName, 0);
+            WriteExecStart(statementName, parameterCount: 0);
 
             return WriteExecFinishAndProcess(initialState, resultFactory, columnBinder);
         }
@@ -123,12 +135,8 @@ namespace Peregrine
                 .WriteShort(1)
                 .WriteShort(parameterCount);
 
-        private async Task WriteExecFinishAndProcess<TState, TResult>(
-            TState initialState,
-            Func<TState, TResult> resultFactory,
-            Action<TResult, ReadBuffer, int, int> columnBinder)
-        {
-            await _writeBuffer
+        private Task WriteExecFinish()
+            => _writeBuffer
                 .WriteShort(1)
                 .WriteShort(1)
                 .EndMessage()
@@ -140,11 +148,17 @@ namespace Peregrine
                 .EndMessage()
                 .FlushAsync();
 
+        private async Task WriteExecFinishAndProcess<TState, TResult>(
+            TState initialState,
+            Func<TState, TResult> resultFactory,
+            Action<TResult, ReadBuffer, int, int> columnBinder)
+        {
+            await WriteExecFinish();
             await _readBuffer.ReceiveAsync();
 
             read:
 
-            var message = ReadMessage();
+            var message = _readBuffer.ReadMessage();
 
             switch (message.Type)
             {
@@ -174,7 +188,7 @@ namespace Peregrine
                     return;
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(ReadErrorMessage());
+                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
                     throw new NotImplementedException(message.Type.ToString());
@@ -203,7 +217,7 @@ namespace Peregrine
 
             read:
 
-            var message = ReadMessage();
+            var message = _readBuffer.ReadMessage();
 
             switch (message.Type)
             {
@@ -241,7 +255,7 @@ namespace Peregrine
                 }
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(ReadErrorMessage());
+                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 case MessageType.BackendKeyData:
                 case MessageType.EmptyQueryResponse:
@@ -278,38 +292,7 @@ namespace Peregrine
             }
         }
 
-        private (MessageType Type, int Length) ReadMessage()
-        {
-            var messageType = (MessageType)_readBuffer.ReadByte();
-            var length = _readBuffer.ReadInt() - 4;
-
-            return (messageType, length);
-        }
-
-        private string ReadErrorMessage()
-        {
-            string message = null;
-
-            read:
-
-            var code = (ErrorFieldTypeCode)_readBuffer.ReadByte();
-
-            switch (code)
-            {
-                case ErrorFieldTypeCode.Done:
-                    break;
-                case ErrorFieldTypeCode.Message:
-                    message = _readBuffer.ReadNullTerminatedString();
-                    break;
-                default:
-                    _readBuffer.ReadNullTerminatedString();
-                    goto read;
-            }
-
-            return message;
-        }
-
-        private async Task WriteStartupAsync()
+        private Task WriteStartupAsync()
         {
             const int protocolVersion3 = 3 << 16;
 
@@ -333,7 +316,7 @@ namespace Peregrine
                     .WriteString(p.Value);
             }
 
-            await _writeBuffer
+            return _writeBuffer
                 .WriteNull()
                 .EndMessage()
                 .FlushAsync();

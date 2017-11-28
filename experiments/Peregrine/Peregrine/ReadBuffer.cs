@@ -23,6 +23,37 @@ namespace Peregrine
             _awaitableSocket = awaitableSocket;
         }
 
+        internal (MessageType Type, int Length) ReadMessage()
+        {
+            var messageType = (MessageType)ReadByte();
+            var length = ReadInt() - 4;
+
+            return (messageType, length);
+        }
+
+        internal string ReadErrorMessage()
+        {
+            string message = null;
+
+            read:
+
+            var code = (ErrorFieldTypeCode)ReadByte();
+
+            switch (code)
+            {
+                case ErrorFieldTypeCode.Done:
+                    break;
+                case ErrorFieldTypeCode.Message:
+                    message = ReadNullTerminatedString();
+                    break;
+                default:
+                    ReadNullTerminatedString();
+                    goto read;
+            }
+
+            return message;
+        }
+
         public byte ReadByte()
         {
             return _buffer[_position++];

@@ -10,12 +10,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using Npgsql;
+using Peregrine.Ado;
 
 namespace BenchmarkDb
 {
     public static class Program
     {
-        private const int DefaultThreadCount = 16;
+        private const int DefaultThreadCount = 64;
         private const int DefaultExecutionTimeSeconds = 10;
         private const int WarmupTimeSeconds = 3;
 
@@ -35,7 +36,8 @@ namespace BenchmarkDb
                 { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
                 { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
-                { "peregrine", new PeregrineDriver() }
+                { "peregrine", new PeregrineDriver() },
+                { "ado-peregrine", new PeregrineAdoDriver(PeregrineFactory.Instance) }
             };
 
         public static async Task<int> Main(string[] args)
@@ -45,7 +47,7 @@ namespace BenchmarkDb
 #endif
             int Help((string option, string value) invalid = default)
             {
-                Console.WriteLine("Usage: <driver> <connection-string> [threads] [variation] [time]");
+                Console.WriteLine("Usage: <driver> <connection-string> <variation> [threads] [time]");
                 Console.WriteLine();
                 Console.WriteLine("Arguments:");
                 Console.WriteLine($"  <driver>            The target database driver ({string.Join(", ", _drivers.Keys.Select(k => $"'{k}'"))}).");
@@ -53,8 +55,8 @@ namespace BenchmarkDb
                 Console.WriteLine($"  <variation>:        The specific variation to run ({string.Join(", ", Variation.Names.Select(k => $"'{k}'"))}).");
                 Console.WriteLine();
                 Console.WriteLine("Options:");
-                Console.WriteLine("  [threads]:   The number of threads to spawn (default 16).");
-                Console.WriteLine("  [time]:      The number of seconds to run for (default 10).");
+                Console.WriteLine($"  [threads]:   The number of threads to spawn (default {DefaultThreadCount}).");
+                Console.WriteLine($"  [time]:      The number of seconds to run for (default {DefaultExecutionTimeSeconds}).");
                 Console.WriteLine();
 
                 if (invalid.option != null)

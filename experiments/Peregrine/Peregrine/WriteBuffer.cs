@@ -98,11 +98,6 @@ namespace Peregrine
 
         public async Task FlushAsync()
         {
-            if (_position == 0)
-            {
-                return;
-            }
-
             _awaitableSocket.SetBuffer(_buffer, 0, _position);
 
             await _awaitableSocket.SendAsync();
