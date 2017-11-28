@@ -66,15 +66,17 @@ namespace Peregrine
             return session;
         }
 
-        public void Return(PGSession obj)
+        public void Return(PGSession session)
         {
             for (var i = 0; i < _sessions.Length; i++)
             {
-                if (Interlocked.CompareExchange(ref _sessions[i], obj, null) == null)
+                if (Interlocked.CompareExchange(ref _sessions[i], session, null) == null)
                 {
                     return;
                 }
             }
+
+            session.Dispose();
         }
 
         public void Dispose()
