@@ -15,7 +15,7 @@ namespace BenchmarkDb
 {
     public static class Program
     {
-        private const int DefaultThreadCount = 16;
+        private const int DefaultThreadCount = 1;
         private const int DefaultExecutionTimeSeconds = 10;
         private const int WarmupTimeSeconds = 3;
 
@@ -35,7 +35,8 @@ namespace BenchmarkDb
                 { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
                 { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
-                { "peregrine", new PeregrineDriver() }
+                { "peregrine", new PeregrineDriver() },
+                { "signalr", new SignalRDriver() }
             };
 
         public static async Task<int> Main(string[] args)

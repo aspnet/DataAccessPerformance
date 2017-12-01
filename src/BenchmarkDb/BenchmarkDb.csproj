@@ -15,6 +15,7 @@
     <PackageReference Include="MySqlConnector" Version="0.28.2" />
     <PackageReference Include="Npgsql" Version="3.2.5" />
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="1.0.0-alpha2-27706" />
   </ItemGroup>
 
   <ItemGroup>
