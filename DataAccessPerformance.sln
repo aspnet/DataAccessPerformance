@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine", "experiments\Pe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine.Tests", "experiments\Peregrine\Peregrine.Tests\Peregrine.Tests.csproj", "{9BFE1DCB-396C-480A-9827-854E75B41BE0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibPQ", "LibPQ\LibPQ.csproj", "{5352049C-BF89-4B53-93FD-DEEADC5E9438}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5352049C-BF89-4B53-93FD-DEEADC5E9438}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5352049C-BF89-4B53-93FD-DEEADC5E9438}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5352049C-BF89-4B53-93FD-DEEADC5E9438}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5352049C-BF89-4B53-93FD-DEEADC5E9438}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -36,6 +42,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{5D23DC7F-7E20-4E88-86A8-3D822A9BE52C} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
+		{5352049C-BF89-4B53-93FD-DEEADC5E9438} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {29C6A361-AEF7-4B3C-BD61-6225B47CBF91}

@@ -35,7 +35,8 @@ namespace BenchmarkDb
                 { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
                 { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
-                { "peregrine", new PeregrineDriver() }
+                { "peregrine", new PeregrineDriver() },
+                { "libpq", new LibPQDriver() }
             };
 
         public static async Task<int> Main(string[] args)

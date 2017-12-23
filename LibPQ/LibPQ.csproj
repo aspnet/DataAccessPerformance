@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AssemblyName>LibPQNet</AssemblyName>
+    <RootNamespace>LibPQNet</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" ('$(Platform)' == 'x64' OR '$(Platform)' == 'AnyCPU') AND '$(OS)' == 'Windows_NT' ">
+    <None Include=".\runtimes\win-x64\native\libpq.dll">
+      <Link>libpq.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include=".\runtimes\win-x64\native\libeay32.dll">
+      <Link>libeay32.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include=".\runtimes\win-x64\native\libiconv-2.dll">
+      <Link>libiconv-2.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include=".\runtimes\win-x64\native\libintl-8.dll">
+      <Link>libintl-8.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include=".\runtimes\win-x64\native\ssleay32.dll">
+      <Link>ssleay32.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="runtimes\win-x64\native\libeay32.dll" Pack="true" PackagePath="runtimes/win-x64/native/libeay32.dll" />
+    <None Include="runtimes\win-x64\native\libiconv-2.dll" Pack="true" PackagePath="runtimes/win-x64/native/libiconv-2.dll" />
+    <None Include="runtimes\win-x64\native\libintl-8.dll" Pack="true" PackagePath="runtimes/win-x64/native/libintl-8.dll" />
+    <None Include="runtimes\win-x64\native\libpq.dll" Pack="true" PackagePath="runtimes/win-x64/native/libpq.dll" />
+    <None Include="runtimes\win-x64\native\ssleay32.dll" Pack="true" PackagePath="runtimes/win-x64/native/ssleay32.dll" />
+  </ItemGroup>
+  
+</Project>
