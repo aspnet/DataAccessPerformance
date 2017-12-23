@@ -32,8 +32,12 @@ namespace BenchmarkDb
                 while (Program.IsRunning)
                 {
                     var results = new List<Fortune>();
-                    
-                    var result = LibPQ.PQexec(dbconn, query);
+
+                    // var result = LibPQ.PQexec(dbconn, query);
+
+                    var result = LibPQ.PQprepare(dbconn, "p0", query, 0, null);
+
+                    result = LibPQ.PQexecPrepared(dbconn, "p0", 0, null, null, null, 0);
 
                     var status = LibPQ.PQresultStatus(result);
 
