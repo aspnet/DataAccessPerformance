@@ -11,6 +11,7 @@ namespace PostgreSql
         private readonly ConnectionFactory _factory;
         private PgResult _lastResult;
         private Dictionary<string, int> _fields;
+        private Dictionary<string, string> _preparedQueries;
 
         internal Connection(PgConn pgConn, ConnectionFactory factory)
         {
@@ -59,7 +60,18 @@ namespace PostgreSql
 
         public void Prepare(string statementName, string commandText, int parameters = 0)
         {
-            LastResult = PQprepare(_pgConn, statementName, commandText, parameters, null);
+            if (_preparedQueries == null)
+            {
+                _preparedQueries = new Dictionary<string, string>();
+            }
+
+            if (_preparedQueries.TryGetValue(statementName, out var preparedCommandText) && commandText == preparedCommandText)
+            {
+                // Query already prepared for this connection
+                return;
+            }
+
+            PQprepare(_pgConn, statementName, commandText, parameters, null);
         }
 
         public void ExecPrepared(string statementName, string[] commandParameters = null)
@@ -121,10 +133,11 @@ namespace PostgreSql
             if (disposing)
             {
                 // Get rid of managed resources
-
             }
 
             ClearLastResult();
+
+            // Prepared queries are reused while the connection is living
 
             // If the finalizer was called or we couldn't return it to the pool, release the unmanaged resources
             if (!disposing || !_factory.Return(this))

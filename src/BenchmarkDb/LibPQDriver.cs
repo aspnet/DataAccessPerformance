@@ -32,11 +32,11 @@ namespace BenchmarkDb
             {
                 using (var connection = connectionFactory.Get())
                 {
+                    connection.Prepare("p0", query);
+
                     while (Program.IsRunning)
                     {
                         var results = new List<Fortune>();
-
-                        connection.Prepare("p0", query);
 
                         connection.ExecPrepared("p0");
 
