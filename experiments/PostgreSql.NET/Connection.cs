@@ -70,6 +70,10 @@ namespace PostgreSql
                 // Query already prepared for this connection
                 return;
             }
+            else
+            {
+                _preparedQueries[statementName] = commandText;
+            }
 
             PQprepare(_pgConn, statementName, commandText, parameters, null);
         }
