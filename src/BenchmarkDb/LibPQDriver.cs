@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using LibPQNet;
+using PostgreSql;
+using PostgreSql.Native;
 
 namespace BenchmarkDb
 {
@@ -15,6 +15,8 @@ namespace BenchmarkDb
         {
             switch (variationName)
             {
+                case Variation.Sync:
+                    return DoWorkSync;
                 case Variation.SyncCaching:
                     return DoWorkSyncCaching;
                 default:
@@ -26,54 +28,91 @@ namespace BenchmarkDb
         {
             const string query = "select id, message from Fortune";
 
-            var dbconn = LibPQ.PQconnectdb(connectionString);
-            try
+            using (var connectionFactory = new ConnectionFactory(connectionString, 1))
+            {
+                using (var connection = connectionFactory.Get())
+                {
+                    while (Program.IsRunning)
+                    {
+                        var results = new List<Fortune>();
+
+                        connection.Prepare("p0", query);
+
+                        connection.ExecPrepared("p0");
+
+                        if (connection.ExecStatus != ExecStatusType.PGRES_TUPLES_OK)
+                        {
+                            throw new ApplicationException("Error");
+                        }
+
+                        var count = connection.Rows;
+
+                        for (var i = 0; i < count; i++)
+                        {
+                            var id = connection.Value(i, 0);
+                            var message = connection.Value(i, 1);
+
+                            var fortune = new Fortune
+                            {
+                                Id = int.Parse(id),
+                                Message = message
+                            };
+
+                            results.Add(fortune);
+                        }
+
+                        CheckResults(results);
+
+                        Program.IncrementCounter();
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public override Task DoWorkSync(string connectionString)
+        {
+            const string query = "select id, message from Fortune";
+
+            using (var connectionFactory = new ConnectionFactory(connectionString))
             {
                 while (Program.IsRunning)
                 {
-                    var results = new List<Fortune>();
-
-                    // var result = LibPQ.PQexec(dbconn, query);
-
-                    var result = LibPQ.PQprepare(dbconn, "p0", query, 0, null);
-
-                    result = LibPQ.PQexecPrepared(dbconn, "p0", 0, null, null, null, 0);
-
-                    var status = LibPQ.PQresultStatus(result);
-
-                    if (status != ExecStatusType.PGRES_TUPLES_OK)
+                    using (var connection = connectionFactory.Get())
                     {
-                        LibPQ.PQclear(result);
-                        throw new ApplicationException("Failed to connect");
-                    }
+                        var results = new List<Fortune>();
 
-                    var count = LibPQ.PQntuples(result);
+                        connection.Prepare("p0", query);
 
-                    for (uint i = 0; i < count; i++)
-                    {
-                        var id = Marshal.PtrToStringAnsi(LibPQ.PQgetvalue(result, i, 0));
-                        var message = Marshal.PtrToStringUTF8(LibPQ.PQgetvalue(result, i, 1));
+                        connection.ExecPrepared("p0");
 
-                        var fortune = new Fortune
+                        if (connection.ExecStatus != ExecStatusType.PGRES_TUPLES_OK)
                         {
-                            Id = int.Parse(id),
-                            Message = message
-                        };
+                            throw new ApplicationException("Error");
+                        }
 
-                        results.Add(fortune);
+                        var count = connection.Rows;
+
+                        for (var i = 0; i < count; i++)
+                        {
+                            var id = connection.Value(i, 0);
+                            var message = connection.Value(i, 1);
+
+                            var fortune = new Fortune
+                            {
+                                Id = int.Parse(id),
+                                Message = message
+                            };
+
+                            results.Add(fortune);
+                        }
+
+                        CheckResults(results);
+
+                        Program.IncrementCounter();
                     }
-
-                    LibPQ.PQclear(result);
-
-                    CheckResults(results);
-
-                    Program.IncrementCounter();
                 }
-
-            }
-            finally
-            {
-                LibPQ.PQfinish(dbconn);
             }
 
             return Task.CompletedTask;

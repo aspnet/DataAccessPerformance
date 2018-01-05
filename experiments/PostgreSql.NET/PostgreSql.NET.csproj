@@ -1,9 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <AssemblyName>LibPQNet</AssemblyName>
-    <RootNamespace>LibPQNet</RootNamespace>
+    <RootNamespace>PostgreSql</RootNamespace>
+    <ApplicationIcon />
+    <StartupObject />
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
 
   <ItemGroup Condition=" ('$(Platform)' == 'x64' OR '$(Platform)' == 'AnyCPU') AND '$(OS)' == 'Windows_NT' ">
@@ -28,7 +35,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
+  
   <ItemGroup>
     <None Include="runtimes\win-x64\native\libeay32.dll" Pack="true" PackagePath="runtimes/win-x64/native/libeay32.dll" />
     <None Include="runtimes\win-x64\native\libiconv-2.dll" Pack="true" PackagePath="runtimes/win-x64/native/libiconv-2.dll" />

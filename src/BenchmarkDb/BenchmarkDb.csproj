@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\experiments\Peregrine\Peregrine\Peregrine.csproj" />
-    <ProjectReference Include="..\..\LibPQ\LibPQ.csproj" />
+    <ProjectReference Include="..\..\experiments\PostgreSql.NET\PostgreSql.NET.csproj" />
   </ItemGroup>
 
 </Project>
