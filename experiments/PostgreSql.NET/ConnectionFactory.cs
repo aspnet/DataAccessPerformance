@@ -5,29 +5,31 @@ using static PostgreSql.Native.Libpq;
 namespace PostgreSql
 {
     /// <summary>
-    /// A <see cref="ConnectionFactory"/> is used as a singleton. Each instance is used for a single connection string.
-    /// TODO:
-    /// - A timer could clean the pool after some time when connections are not used
-    /// </summary>
-    public class ConnectionFactory : IDisposable
+    /// A <see cref="Database"/> instance represents a PostgreSql server configuration.
+    /// It is thread-safe and should be shared across the application for a single connection string.
+    public class Database : IDisposable
     {
+        /// TODO: A timer could clean the pool after some time when connections are not used
+
         public static int DefaultPoolSize = 100;
 
         private readonly Connection[] _connections;
         private readonly string _connectionString;
 
-        public ConnectionFactory(string connectionString) : this(connectionString, DefaultPoolSize)
+        public Database(string connectionString) : this(connectionString, DefaultPoolSize)
         {
         }
 
-        public ConnectionFactory(string connectionString, int poolSize)
+        public Database(string connectionString, int poolSize)
         {
+            // Use the connection string as is if it is in a supported libpq format
             if (connectionString.StartsWith("postgresql://"))
             {
                 _connectionString = connectionString;
             }
             else
             {
+                // Try to extract the parameters from an ADO.NET connection string
                 _connectionString = "";
 
                 var segments = connectionString.Split(";");
@@ -70,7 +72,11 @@ namespace PostgreSql
             }
         }
 
-        public Connection Get()
+        /// <summary>
+        /// Creates an actual connection to the database.
+        /// </summary>
+        /// <returns>A <see cref="Connection"/> instance or <c>null</c> if the connection failed.</returns>
+        public Connection Connect()
         {
             for (var i = 0; i < _connections.Length; i++)
             {

@@ -8,12 +8,12 @@ namespace PostgreSql
     public class Connection : IDisposable
     {
         private readonly PgConn _pgConn;
-        private readonly ConnectionFactory _factory;
+        private readonly Database _factory;
         private PgResult _lastResult;
         private Dictionary<string, int> _fields;
         private Dictionary<string, string> _preparedQueries;
 
-        internal Connection(PgConn pgConn, ConnectionFactory factory)
+        internal Connection(PgConn pgConn, Database factory)
         {
             _pgConn = pgConn;
             _factory = factory;

@@ -18,12 +18,10 @@ namespace ConsoleApplication1
             // https://github.com/brianc/node-libpq - native wrapper around libpq for nodejs
             // https://github.com/brianc/node-pg-native - user friendly api around node-libpq
 
+            var factory = new Database("Server=172.16.228.78;Database=hello_world;User Id=benchmarkdbuser;Password=benchmarkdbpass;Maximum Pool Size=200;NoResetOnClose=true");
+            // var factory = new Database("postgresql://benchmarkdbuser@asp-perf-db/hello_world?password=benchmarkdbpass");
 
-            var connectionString = "Server=172.16.228.78;Database=hello_world;User Id=benchmarkdbuser;Password=benchmarkdbpass;Maximum Pool Size=200;NoResetOnClose=true";
-            // "postgresql://benchmarkdbuser@asp-perf-db/hello_world?password=benchmarkdbpass"
-
-            var factory = new ConnectionFactory(connectionString);
-            var connection = factory.Get();
+            var connection = factory.Connect();
 
             if (connection == null)
             {

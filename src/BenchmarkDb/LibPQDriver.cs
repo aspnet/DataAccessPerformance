@@ -28,9 +28,9 @@ namespace BenchmarkDb
         {
             const string query = "select id, message from Fortune";
 
-            using (var connectionFactory = new ConnectionFactory(connectionString, 1))
+            using (var connectionFactory = new Database(connectionString, 1))
             {
-                using (var connection = connectionFactory.Get())
+                using (var connection = connectionFactory.Connect())
                 {
                     connection.Prepare("p0", query);
 
@@ -75,11 +75,11 @@ namespace BenchmarkDb
         {
             const string query = "select id, message from Fortune";
 
-            using (var connectionFactory = new ConnectionFactory(connectionString))
+            using (var connectionFactory = new Database(connectionString))
             {
                 while (Program.IsRunning)
                 {
-                    using (var connection = connectionFactory.Get())
+                    using (var connection = connectionFactory.Connect())
                     {
                         var results = new List<Fortune>();
 
