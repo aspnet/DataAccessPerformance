@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2006
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BenchmarkDb", "src\BenchmarkDb\BenchmarkDb.csproj", "{7FA56803-EFBD-4028-8067-33F9608E7821}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine", "experiments\Peregrine\Peregrine\Peregrine.csproj", "{5D23DC7F-7E20-4E88-86A8-3D822A9BE52C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine.Tests", "experiments\Peregrine\Peregrine.Tests\Peregrine.Tests.csproj", "{9BFE1DCB-396C-480A-9827-854E75B41BE0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Npgsql", "..\..\npgsql\npgsql\src\Npgsql\Npgsql.csproj", "{01758E9C-9E27-4990-915B-817A8CF1CE32}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +31,10 @@ Global
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01758E9C-9E27-4990-915B-817A8CF1CE32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01758E9C-9E27-4990-915B-817A8CF1CE32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01758E9C-9E27-4990-915B-817A8CF1CE32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01758E9C-9E27-4990-915B-817A8CF1CE32}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -36,6 +42,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{5D23DC7F-7E20-4E88-86A8-3D822A9BE52C} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
 		{9BFE1DCB-396C-480A-9827-854E75B41BE0} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
+		{01758E9C-9E27-4990-915B-817A8CF1CE32} = {F5A90C0E-9ECD-4338-9749-03B3004C2D02}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {29C6A361-AEF7-4B3C-BD61-6225B47CBF91}
