@@ -48,6 +48,16 @@ namespace BenchmarkDb
             throw VariationNotSupported(Variation.SyncCaching);
         }
 
+        public virtual void SyncQuery(int iterations)
+        {
+            throw VariationNotSupported(Variation.SyncCaching);
+        }
+
+        public virtual Task AsyncQuery(int iterations)
+        {
+            throw VariationNotSupported(Variation.SyncCaching);
+        }
+
         public virtual Task DoWorkAsync()
         {
             throw VariationNotSupported(Variation.Async);

@@ -82,6 +82,38 @@ namespace Peregrine
             }
         }
 
+        public void Prepare(string statementName, string query)
+        {
+            ThrowIfDisposed();
+            ThrowIfNotConnected();
+
+            _writeBuffer
+                .StartMessage('P')
+                .WriteString(statementName)
+                .WriteString(query)
+                .WriteShort(0)
+                .EndMessage()
+                .StartMessage('S')
+                .EndMessage()
+                .Flush();
+
+            _readBuffer.Receive();
+
+            var message = ReadMessage();
+
+            switch (message.Type)
+            {
+                case MessageType.ParseComplete:
+                    break;
+
+                case MessageType.ErrorResponse:
+                    throw new InvalidOperationException(ReadErrorMessage());
+
+                default:
+                    throw new NotImplementedException(message.Type.ToString());
+            }
+        }
+
         public Task ExecuteAsync<TResult>(
             string statementName,
             Func<TResult> resultFactory,
@@ -97,7 +129,7 @@ namespace Peregrine
                 .WriteInt(4)
                 .WriteInt(parameterValue);
 
-            return WriteExecFinishAndProcess<object, TResult>(null, _ => resultFactory(), columnBinder);
+            return WriteExecFinishAndProcessAsync<object, TResult>(null, _ => resultFactory(), columnBinder);
         }
 
         public Task ExecuteAsync<TState, TResult>(
@@ -111,7 +143,21 @@ namespace Peregrine
 
             WriteExecStart(statementName, 0);
 
-            return WriteExecFinishAndProcess(initialState, resultFactory, columnBinder);
+            return WriteExecFinishAndProcessAsync(initialState, resultFactory, columnBinder);
+        }
+
+        public void Execute<TState, TResult>(
+            string statementName,
+            TState initialState,
+            Func<TState, TResult> resultFactory,
+            Action<TResult, ReadBuffer, int, int> columnBinder)
+        {
+            ThrowIfDisposed();
+            ThrowIfNotConnected();
+
+            WriteExecStart(statementName, 0);
+
+            WriteExecFinishAndProcess(initialState, resultFactory, columnBinder);
         }
 
         private void WriteExecStart(string statementName, short parameterCount)
@@ -123,7 +169,65 @@ namespace Peregrine
                 .WriteShort(1)
                 .WriteShort(parameterCount);
 
-        private async Task WriteExecFinishAndProcess<TState, TResult>(
+        private void WriteExecFinishAndProcess<TState, TResult>(
+            TState initialState,
+            Func<TState, TResult> resultFactory,
+            Action<TResult, ReadBuffer, int, int> columnBinder)
+        {
+            _writeBuffer
+                .WriteShort(1)
+                .WriteShort(1)
+                .EndMessage()
+                .StartMessage('E')
+                .WriteNull()
+                .WriteInt(0)
+                .EndMessage()
+                .StartMessage('S')
+                .EndMessage()
+                .Flush();
+
+            _readBuffer.Receive();
+
+            read:
+
+            var message = ReadMessage();
+
+            switch (message.Type)
+            {
+                case MessageType.BindComplete:
+                    goto read;
+
+                case MessageType.DataRow:
+                {
+                    var result
+                        = resultFactory != null
+                            ? resultFactory(initialState)
+                            : default;
+
+                    var columns = _readBuffer.ReadShort();
+
+                    for (var i = 0; i < columns; i++)
+                    {
+                        var length = _readBuffer.ReadInt();
+
+                        columnBinder(result, _readBuffer, i, length);
+                    }
+
+                    goto read;
+                }
+
+                case MessageType.CommandComplete:
+                    return;
+
+                case MessageType.ErrorResponse:
+                    throw new InvalidOperationException(ReadErrorMessage());
+
+                default:
+                    throw new NotImplementedException(message.Type.ToString());
+            }
+        }
+
+        private async Task WriteExecFinishAndProcessAsync<TState, TResult>(
             TState initialState,
             Func<TState, TResult> resultFactory,
             Action<TResult, ReadBuffer, int, int> columnBinder)
@@ -188,6 +292,104 @@ namespace Peregrine
             return IsConnected
                 ? Task.CompletedTask
                 : StartSessionAsync(millisecondsTimeout);
+        }
+
+        public void Start(int millisecondsTimeout = DefaultConnectionTimeout)
+        {
+            ThrowIfDisposed();
+
+            if (!IsConnected)
+            {
+                StartSession(millisecondsTimeout);
+            }
+        }
+
+        private void StartSession(int millisecondsTimeout)
+        {
+            OpenSocket(millisecondsTimeout);
+
+            _writeBuffer = new WriteBuffer(_awaitableSocket);
+            _readBuffer = new ReadBuffer(_awaitableSocket);
+
+            WriteStartup();
+
+            _readBuffer.Receive();
+
+            read:
+
+            var message = ReadMessage();
+
+            switch (message.Type)
+            {
+                case MessageType.AuthenticationRequest:
+                    {
+                        var authenticationRequestType
+                            = (AuthenticationRequestType)_readBuffer.ReadInt();
+
+                        switch (authenticationRequestType)
+                        {
+                            case AuthenticationRequestType.AuthenticationOk:
+                                {
+                                    return;
+                                }
+
+                            case AuthenticationRequestType.AuthenticationMD5Password:
+                                {
+                                    var salt = _readBuffer.ReadBytes(4);
+                                    var hash = Hashing.CreateMD5(_password, _user, salt);
+
+                                    _writeBuffer
+                                        .StartMessage('p')
+                                        .WriteBytes(hash)
+                                        .EndMessage()
+                                        .Flush();
+
+                                    _readBuffer.Receive();
+
+                                    goto read;
+                                }
+
+                            default:
+                                throw new NotImplementedException(authenticationRequestType.ToString());
+                        }
+                    }
+
+                case MessageType.ErrorResponse:
+                    throw new InvalidOperationException(ReadErrorMessage());
+
+                case MessageType.BackendKeyData:
+                case MessageType.EmptyQueryResponse:
+                case MessageType.ParameterStatus:
+                case MessageType.ReadyForQuery:
+                    throw new NotImplementedException($"Unhandled MessageType '{message.Type}'");
+
+                default:
+                    throw new InvalidOperationException($"Unexpected MessageType '{message.Type}'");
+            }
+        }
+
+        private void OpenSocket(int millisecondsTimeout)
+        {
+            var socket
+                = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+                {
+                    NoDelay = true
+                };
+
+            _awaitableSocket
+                = new AwaitableSocket(
+                    new SocketAsyncEventArgs
+                    {
+                        RemoteEndPoint = new IPEndPoint(IPAddress.Parse(_host), _port)
+                    },
+                    socket);
+
+            using (var cts = new CancellationTokenSource())
+            {
+                cts.CancelAfter(millisecondsTimeout);
+
+                _awaitableSocket.Connect(cts.Token);
+            }
         }
 
         private async Task StartSessionAsync(int millisecondsTimeout)
@@ -337,6 +539,36 @@ namespace Peregrine
                 .WriteNull()
                 .EndMessage()
                 .FlushAsync();
+        }
+
+        private void WriteStartup()
+        {
+            const int protocolVersion3 = 3 << 16;
+
+            var parameters = new(string Name, string Value)[]
+            {
+                ("user", _user),
+                ("client_encoding", "UTF8"),
+                ("database", _database)
+            };
+
+            _writeBuffer
+                .StartMessage()
+                .WriteInt(protocolVersion3);
+
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                var p = parameters[i];
+
+                _writeBuffer
+                    .WriteString(p.Name)
+                    .WriteString(p.Value);
+            }
+
+            _writeBuffer
+                .WriteNull()
+                .EndMessage()
+                .Flush();
         }
 
         public void Terminate()

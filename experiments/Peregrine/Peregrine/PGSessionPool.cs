@@ -36,7 +36,7 @@ namespace Peregrine
 
         public Func<PGSession, Task> OnCreate { get; set; }
 
-        public ValueTask<PGSession> Rent()
+        public ValueTask<PGSession> RentAsync()
         {
             for (var i = 0; i < _sessions.Length; i++)
             {
@@ -49,10 +49,10 @@ namespace Peregrine
                 }
             }
 
-            return CreateSession();
+            return CreateSessionAsync();
         }
 
-        private async ValueTask<PGSession> CreateSession()
+        private async ValueTask<PGSession> CreateSessionAsync()
         {
             var session = new PGSession(_host, _port, _database, _user, _password);
 
@@ -62,6 +62,31 @@ namespace Peregrine
             {
                 await OnCreate.Invoke(session);
             }
+
+            return session;
+        }
+
+        public PGSession Rent()
+        {
+            for (var i = 0; i < _sessions.Length; i++)
+            {
+                var item = _sessions[i];
+
+                if (item != null
+                    && Interlocked.CompareExchange(ref _sessions[i], null, item) == item)
+                {
+                    return item;
+                }
+            }
+
+            return CreateSession();
+        }
+
+        private PGSession CreateSession()
+        {
+            var session = new PGSession(_host, _port, _database, _user, _password);
+
+            session.Start();
 
             return session;
         }

@@ -113,5 +113,19 @@ namespace Peregrine
 
             _position = 0;
         }
+
+        public void Receive()
+        {
+            _awaitableSocket.SetBuffer(_buffer, 0, _buffer.Length);
+
+            var bytesTransferred = _awaitableSocket.Receive();
+
+            if (bytesTransferred == 0)
+            {
+                throw new EndOfStreamException();
+            }
+
+            _position = 0;
+        }
     }
 }

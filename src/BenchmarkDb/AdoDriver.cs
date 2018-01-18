@@ -61,6 +61,73 @@ namespace BenchmarkDb
             return Task.CompletedTask;
         }
 
+        public override void SyncQuery(int iterations)
+        {
+            using (var connection = _providerFactory.CreateConnection())
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    connection.ConnectionString = _connectionString;
+                    connection.Open();
+
+                    command.CommandText = Program.TestQuery;
+                    command.Prepare();
+
+                    for (var i = 0; i < iterations; i++)
+                    {
+                        var results = new List<Fortune>();
+
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                results.Add(
+                                    new Fortune
+                                    {
+                                        Id = reader.GetInt32(0),
+                                        Message = reader.GetString(1)
+                                    });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public override async Task AsyncQuery(int iterations)
+        {
+            using (var connection = _providerFactory.CreateConnection())
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    connection.ConnectionString = _connectionString;
+
+                    await connection.OpenAsync();
+
+                    command.CommandText = Program.TestQuery;
+                    command.Prepare();
+
+                    for (var i = 0; i < iterations; i++)
+                    {
+                        var results = new List<Fortune>();
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                results.Add(
+                                    new Fortune
+                                    {
+                                        Id = reader.GetInt32(0),
+                                        Message = reader.GetString(1)
+                                    });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public override Task DoWorkSyncCaching()
         {
             using (var connection = _providerFactory.CreateConnection())

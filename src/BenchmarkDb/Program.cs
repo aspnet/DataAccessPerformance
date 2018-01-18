@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -111,6 +112,15 @@ namespace BenchmarkDb
 
             driver.Initialize(connectionString, threadCount);
 
+//            var sw = Stopwatch.StartNew();
+//
+//            await driver.AsyncQuery(200000);
+//
+//            sw.Stop();
+//
+//            Console.WriteLine(sw.ElapsedMilliseconds + "ms");
+
+
             DateTime startTime = default, stopTime = default;
 
             var totalTransactions = 0;
@@ -208,6 +218,7 @@ namespace BenchmarkDb
             {
                 sw.WriteLine($"{desc},{variationName},{threadCount:D2},{totalTps:F0},{stdDev:F0}");
             }
+
 
             (driver as IDisposable)?.Dispose();
 

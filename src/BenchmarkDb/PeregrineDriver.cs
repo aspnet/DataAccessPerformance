@@ -21,6 +21,8 @@ namespace BenchmarkDb
                     return DoWorkAsync;
                 case Variation.AsyncCaching:
                     return DoWorkAsyncCaching;
+                case Variation.SyncCaching:
+                    return DoWorkSyncCaching;
                 default:
                     return NotSupportedVariation;
             }
@@ -66,13 +68,61 @@ namespace BenchmarkDb
             }
         }
 
+        public override void SyncQuery(int iterations)
+        {
+            var session = _sessionPool.Rent();
+            session.Prepare("q", "select id, message from fortune");
+
+            for (var i = 0; i < iterations; i++)
+            {
+                var results = new List<Fortune>();
+
+                session.Execute("q", results, CreateFortune, BindColumn);
+            }
+        }
+
+        public override async Task AsyncQuery(int iterations)
+        {
+            var session = await _sessionPool.RentAsync();
+            
+            for (var i = 0; i < iterations; i++)
+            {
+                var results = new List<Fortune>();
+
+                await session.ExecuteAsync("q", results, CreateFortune, BindColumn);
+            }
+        }
+
+        public override async Task DoWorkSyncCaching()
+        {
+            var session = await _sessionPool.RentAsync();
+
+            try
+            {
+                while (Program.IsRunning)
+                {
+                    var results = new List<Fortune>();
+
+                    session.Execute("q", results, CreateFortune, BindColumn);
+
+                    CheckResults(results);
+
+                    Program.IncrementCounter();
+                }
+            }
+            finally
+            {
+                _sessionPool.Return(session);
+            }
+        }
+
         public override async Task DoWorkAsync()
         {
             while (Program.IsRunning)
             {
                 var results = new List<Fortune>();
 
-                var session = await _sessionPool.Rent();
+                var session = await _sessionPool.RentAsync();
 
                 try
                 {
@@ -91,7 +141,7 @@ namespace BenchmarkDb
 
         public override async Task DoWorkAsyncCaching()
         {
-            var session = await _sessionPool.Rent();
+            var session = await _sessionPool.RentAsync();
 
             try
             {

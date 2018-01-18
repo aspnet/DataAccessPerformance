@@ -109,5 +109,19 @@ namespace Peregrine
 
             _position = 0;
         }
+
+        public void Flush()
+        {
+            if (_position == 0)
+            {
+                return;
+            }
+
+            _awaitableSocket.SetBuffer(_buffer, 0, _position);
+
+            _awaitableSocket.Send();
+
+            _position = 0;
+        }
     }
 }

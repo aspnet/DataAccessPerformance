@@ -13,7 +13,7 @@ namespace Peregrine.Tests
     {
         private const string Host = "127.0.0.1";
         private const int Port = 5432;
-        private const string Database = "aspnet5-Benchmarks";
+        private const string Database = "benchmarks";
         private const string User = "postgres";
         private const string Password = "Password1";
 
@@ -164,6 +164,44 @@ namespace Peregrine.Tests
                 var fortunes = new List<Fortune>();
 
                 await session.ExecuteAsync("q", fortunes, CreateFortune, BindColumn);
+
+                Assert.Equal(12, fortunes.Count);
+            }
+        }
+
+        [Fact]
+        public async Task Execute_query_no_parameters_success_sync()
+        {
+            using (var session = new PGSession(Host, Port, Database, User, Password))
+            {
+                await session.StartAsync();
+                await session.PrepareAsync("q", "select id, message from fortune");
+
+                Fortune CreateFortune(List<Fortune> results)
+                {
+                    var fortune = new Fortune();
+
+                    results.Add(fortune);
+
+                    return fortune;
+                }
+
+                void BindColumn(Fortune fortune, ReadBuffer readBuffer, int index, int length)
+                {
+                    switch (index)
+                    {
+                        case 0:
+                            fortune.Id = readBuffer.ReadInt();
+                            break;
+                        case 1:
+                            fortune.Message = readBuffer.ReadString(length);
+                            break;
+                    }
+                }
+
+                var fortunes = new List<Fortune>();
+
+                session.Execute("q", fortunes, CreateFortune, BindColumn);
 
                 Assert.Equal(12, fortunes.Count);
             }
