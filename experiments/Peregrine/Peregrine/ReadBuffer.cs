@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Buffers.Binary;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace Peregrine
@@ -14,7 +14,7 @@ namespace Peregrine
 
         private readonly AwaitableSocket _awaitableSocket;
 
-        private readonly byte[] _buffer = new byte[DefaultBufferSize];
+        private readonly Memory<byte> _buffer = new Memory<byte>(new byte[DefaultBufferSize]);
 
         private int _position;
 
@@ -55,83 +55,86 @@ namespace Peregrine
         }
 
         public byte ReadByte()
-        {
-            return _buffer[_position++];
-        }
+            => _buffer.Span[_position++];
 
         public byte[] ReadBytes(int length)
         {
             var bs = new byte[length];
 
-            Buffer.BlockCopy(_buffer, _position, bs, 0, length);
-
-            _position += length;
+            var span = _buffer.Span;
+            for (var i = 0; i < length; i++)
+                bs[i] = span[_position++];
 
             return bs;
         }
 
         public short ReadShort()
         {
-            var s = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(_buffer, _position));
-
+            var result = BinaryPrimitives.ReadInt16BigEndian(_buffer.Span.Slice(_position, 2));
             _position += sizeof(short);
-
-            return s;
+            return result;
         }
 
         public ushort ReadUShort()
         {
-            var us = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToUInt16(_buffer, _position));
-
-            _position += sizeof(ushort);
-
-            return us;
+            var result = BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(_position, 2));
+            _position += sizeof(short);
+            return result;
         }
 
         public int ReadInt()
         {
-            var i = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(_buffer, _position));
-
+            var result = BinaryPrimitives.ReadInt32BigEndian(_buffer.Span.Slice(_position, 4));
             _position += sizeof(int);
-
-            return i;
+            return result;
         }
 
         public uint ReadUInt()
         {
-            var ui = (uint)IPAddress.NetworkToHostOrder(BitConverter.ToUInt32(_buffer, _position));
-
-            _position += sizeof(uint);
-
-            return ui;
+            var result = BinaryPrimitives.ReadUInt32BigEndian(_buffer.Span.Slice(_position, 4));
+            _position += sizeof(int);
+            return result;
         }
 
         public string ReadNullTerminatedString()
         {
             var start = _position;
+            var span = _buffer.Span;
 
-            while (_buffer[_position++] != 0
+            while (span[_position++] != 0
                    && _position < _buffer.Length)
+
             {
             }
 
-            var s = PG.UTF8.GetString(_buffer, start, _position - start - 1);
+            var s = PG.UTF8.GetString(span.Slice(start, _position - start - 1));
 
             return s;
+
+            //            var span = _buffer.Span;
+            //            var length = _position;
+            //
+            //            while (span[length++] != 0
+            //                   && length < _buffer.Length)
+            //            {
+            //                var x = span[length];
+            //            }
+            //
+            //            var result = PG.UTF8.GetString(span.Slice(_position, length - _position - 1));
+            //            _position += length;
+            //            return result;
         }
 
         public string ReadString(int length)
         {
-            var s = PG.UTF8.GetString(_buffer, _position, length);
-
+            var result = PG.UTF8.GetString(_buffer.Span.Slice(_position, length));
             _position += length;
-
-            return s;
+            return result;
         }
 
         public async Task ReceiveAsync()
         {
-            _awaitableSocket.SetBuffer(_buffer, 0, _buffer.Length);
+            _awaitableSocket.SetBuffer(_buffer);
 
             await _awaitableSocket.ReceiveAsync();
 

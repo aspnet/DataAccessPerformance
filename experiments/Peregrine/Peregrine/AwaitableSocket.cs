@@ -42,6 +42,9 @@ namespace Peregrine
             _socketAsyncEventArgs.SetBuffer(buffer, offset, count);
         }
 
+        public void SetBuffer(Memory<byte> memory)
+            => _socketAsyncEventArgs.SetBuffer(memory);
+
         public AwaitableSocket ConnectAsync(CancellationToken cancellationToken)
         {
             Reset();
