@@ -12,8 +12,15 @@ namespace Peregrine.Ado
     public class PeregrineCommand : DbCommand
     {
         private readonly PGSession _session;
+        private readonly PeregrineDataReader _reader;
+        private readonly ReadBuffer _readBuffer;
 
-        public PeregrineCommand(PGSession session) => _session = session;
+        public PeregrineCommand(PGSession session)
+        {
+            _session = session;
+            _readBuffer = session.ReadBuffer;
+            _reader = new PeregrineDataReader(session.ReadBuffer);
+        }
 
         public Task PrepareAsync() => _session.PrepareAsync("p", CommandText);
 
@@ -21,26 +28,23 @@ namespace Peregrine.Ado
             CommandBehavior behavior, CancellationToken cancellationToken)
         {
             await _session.ExecuteAsync("p");
+            await _readBuffer.ReceiveAsync();
 
-            var readBuffer = _session.ReadBuffer;
+            var message = _readBuffer.ReadMessage();
 
-            await readBuffer.ReceiveAsync();
-
-            var message = readBuffer.ReadMessage();
-
-            switch (message.Type)
+            switch (message)
             {
                 case MessageType.BindComplete:
-                    return new PeregrineDataReader(readBuffer);
+                    return _reader;
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(readBuffer.ReadErrorMessage());
+                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
-                    throw new NotImplementedException(message.Type.ToString());
+                    throw new NotImplementedException(message.ToString());
             }
         }
-
+        
         public override int ExecuteNonQuery()
             => throw new NotImplementedException();
 

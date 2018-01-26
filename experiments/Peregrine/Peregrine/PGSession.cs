@@ -69,7 +69,7 @@ namespace Peregrine
 
             var message = _readBuffer.ReadMessage();
 
-            switch (message.Type)
+            switch (message)
             {
                 case MessageType.ParseComplete:
                     break;
@@ -78,7 +78,7 @@ namespace Peregrine
                     throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
-                    throw new NotImplementedException(message.Type.ToString());
+                    throw new NotImplementedException(message.ToString());
             }
         }
 
@@ -160,7 +160,7 @@ namespace Peregrine
 
             var message = _readBuffer.ReadMessage();
 
-            switch (message.Type)
+            switch (message)
             {
                 case MessageType.BindComplete:
                     goto read;
@@ -191,7 +191,7 @@ namespace Peregrine
                     throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
-                    throw new NotImplementedException(message.Type.ToString());
+                    throw new NotImplementedException(message.ToString());
             }
         }
 
@@ -219,7 +219,7 @@ namespace Peregrine
 
             var message = _readBuffer.ReadMessage();
 
-            switch (message.Type)
+            switch (message)
             {
                 case MessageType.AuthenticationRequest:
                 {
@@ -261,10 +261,10 @@ namespace Peregrine
                 case MessageType.EmptyQueryResponse:
                 case MessageType.ParameterStatus:
                 case MessageType.ReadyForQuery:
-                    throw new NotImplementedException($"Unhandled MessageType '{message.Type}'");
+                    throw new NotImplementedException($"Unhandled MessageType '{message}'");
 
                 default:
-                    throw new InvalidOperationException($"Unexpected MessageType '{message.Type}'");
+                    throw new InvalidOperationException($"Unexpected MessageType '{message}'");
             }
         }
 

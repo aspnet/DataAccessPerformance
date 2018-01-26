@@ -3,8 +3,6 @@
 
 using System;
 using System.Buffers.Binary;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Peregrine
 {
@@ -23,7 +21,17 @@ namespace Peregrine
             _awaitableSocket = awaitableSocket;
         }
 
-        internal (MessageType Type, int Length) ReadMessage()
+        internal MessageType ReadMessage()
+        {
+            var messageType = (MessageType)ReadByte();
+
+            // Skip length
+            _position += sizeof(int);
+
+            return messageType;
+        }
+
+        internal (MessageType Type, int Length) ReadMessageWithLength()
         {
             var messageType = (MessageType)ReadByte();
             var length = ReadInt() - 4;
@@ -66,6 +74,11 @@ namespace Peregrine
                 bs[i] = span[_position++];
 
             return bs;
+        }
+
+        public void SkipShort()
+        {
+            _position += sizeof(short);
         }
 
         public short ReadShort()

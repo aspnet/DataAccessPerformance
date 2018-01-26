@@ -23,12 +23,12 @@ namespace Peregrine.Ado
         {
             var message = _readBuffer.ReadMessage();
 
-            switch (message.Type)
+            switch (message)
             {
                 case MessageType.DataRow:
                 {
                     // Column count
-                    _readBuffer.ReadShort();
+                    _readBuffer.SkipShort();
 
                     return _trueResult;
                 }
@@ -40,7 +40,7 @@ namespace Peregrine.Ado
                     throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
 
                 default:
-                    throw new NotImplementedException(message.Type.ToString());
+                    throw new NotImplementedException(message.ToString());
             }
         }
 
