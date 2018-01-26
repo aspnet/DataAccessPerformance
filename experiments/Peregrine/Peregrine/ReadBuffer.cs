@@ -110,19 +110,6 @@ namespace Peregrine
             var s = PG.UTF8.GetString(span.Slice(start, _position - start - 1));
 
             return s;
-
-            //            var span = _buffer.Span;
-            //            var length = _position;
-            //
-            //            while (span[length++] != 0
-            //                   && length < _buffer.Length)
-            //            {
-            //                var x = span[length];
-            //            }
-            //
-            //            var result = PG.UTF8.GetString(span.Slice(_position, length - _position - 1));
-            //            _position += length;
-            //            return result;
         }
 
         public string ReadString(int length)
@@ -132,20 +119,12 @@ namespace Peregrine
             return result;
         }
 
-        public async Task ReceiveAsync()
+        public AwaitableSocket ReceiveAsync()
         {
             _awaitableSocket.SetBuffer(_buffer);
-
-            await _awaitableSocket.ReceiveAsync();
-
-            var bytesTransferred = _awaitableSocket.BytesTransferred;
-
-            if (bytesTransferred == 0)
-            {
-                throw new EndOfStreamException();
-            }
-
             _position = 0;
+
+            return _awaitableSocket.ReceiveAsync();
         }
     }
 }

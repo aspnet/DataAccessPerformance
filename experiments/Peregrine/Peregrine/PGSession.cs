@@ -82,7 +82,7 @@ namespace Peregrine
             }
         }
 
-        public Task ExecuteAsync(string statementName)
+        public AwaitableSocket ExecuteAsync(string statementName)
         {
             ThrowIfDisposed();
             ThrowIfNotConnected();
@@ -135,7 +135,7 @@ namespace Peregrine
                 .WriteShort(1)
                 .WriteShort(parameterCount);
 
-        private Task WriteExecFinish()
+        private AwaitableSocket WriteExecFinish()
             => _writeBuffer
                 .WriteShort(1)
                 .WriteShort(1)
@@ -292,7 +292,7 @@ namespace Peregrine
             }
         }
 
-        private Task WriteStartupAsync()
+        private AwaitableSocket WriteStartupAsync()
         {
             const int protocolVersion3 = 3 << 16;
 

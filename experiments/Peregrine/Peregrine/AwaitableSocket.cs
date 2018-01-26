@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Peregrine
 {
-    internal sealed class AwaitableSocket : INotifyCompletion, IDisposable
+    public sealed class AwaitableSocket : INotifyCompletion, IDisposable
     {
         private static readonly Action Sentinel = () => { };
 

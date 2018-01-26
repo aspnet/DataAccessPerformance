@@ -96,13 +96,12 @@ namespace Peregrine
             return WriteNull();
         }
 
-        public async Task FlushAsync()
+        public AwaitableSocket FlushAsync()
         {
             _awaitableSocket.SetBuffer(_buffer, 0, _position);
-
-            await _awaitableSocket.SendAsync();
-
             _position = 0;
+
+            return _awaitableSocket.SendAsync();
         }
     }
 }
