@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -12,7 +13,49 @@ namespace Peregrine.Ado
 {
     public class PeregrineConnection : DbConnection
     {
+        private sealed class Pool
+        {
+            private readonly PGSession[] _sessions;
+
+            public Pool(int maximumRetained)
+            {
+                _sessions = new PGSession[maximumRetained];
+            }
+
+            public PGSession Rent()
+            {
+                for (var i = 0; i < _sessions.Length; i++)
+                {
+                    var item = _sessions[i];
+
+                    if (item != null
+                        && Interlocked.CompareExchange(ref _sessions[i], null, item) == item)
+                    {
+                        return item;
+                    }
+                }
+
+                return null;
+            }
+
+            public void Return(PGSession session)
+            {
+                for (var i = 0; i < _sessions.Length; i++)
+                {
+                    if (Interlocked.CompareExchange(ref _sessions[i], session, null) == null)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static readonly ConcurrentDictionary<string, Pool> _pools
+            = new ConcurrentDictionary<string, Pool>();
+
         private PGSession _session;
+
+        private bool _disposed;
 
         public override string ConnectionString { get; set; }
 
@@ -23,44 +66,57 @@ namespace Peregrine.Ado
 
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
+            ThrowIfDisposed();
+
+            if (_session != null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var pool = _pools.GetOrAdd(ConnectionString, _ => new Pool(256));
+
+            _session = pool.Rent();
+
             if (_session == null)
             {
-                var connectionInfo
+                var parts
                     = (from s in ConnectionString.Split(';')
                        let kv = s.Split('=')
                        select kv)
                     .ToDictionary(p => p[0], p => p[1]);
 
-                _session
-                    = new PGSession(
-                        connectionInfo["host"],
-                        5432,
-                        connectionInfo["database"],
-                        connectionInfo["username"],
-                        connectionInfo["password"]);
-
-                return _session.StartAsync();
+                _session = new PGSession(
+                    parts["host"],
+                    port: 5432,
+                    database: parts["database"],
+                    user: parts["username"],
+                    password: parts["password"]);
             }
 
-            return Task.CompletedTask;
+            return _session.IsConnected ? Task.CompletedTask : _session.StartAsync();
         }
 
-        public new PeregrineCommand CreateCommand()
+        private void ThrowIfDisposed()
         {
-            return new PeregrineCommand(_session);
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(PeregrineConnection));
+            }
         }
 
-        protected override DbCommand CreateDbCommand()
+        protected override void Dispose(bool disposing)
         {
-            return new PeregrineCommand(_session);
+            if (_session != null)
+            {
+                _pools[ConnectionString].Return(_session);
+            }
+
+            _disposed = true;
         }
 
-        public override void Close()
-        {
-            _session?.Dispose();
-            _session = null;
-        }
+        protected override DbCommand CreateDbCommand() => new PeregrineCommand(_session);
 
+        public override void Close() => throw new NotImplementedException();
         public override string Database => throw new NotImplementedException();
         public override string DataSource => throw new NotImplementedException();
         public override string ServerVersion => throw new NotImplementedException();

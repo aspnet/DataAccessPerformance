@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -20,11 +21,12 @@ namespace Peregrine
         private readonly string _password;
 
         private WriteBuffer _writeBuffer;
-        private ReadBuffer _readBuffer;
 
         private AwaitableSocket _awaitableSocket;
 
         private bool _disposed;
+
+        private readonly HashSet<string> _prepared = new HashSet<string>();
 
         public PGSession(
             string host,
@@ -50,11 +52,18 @@ namespace Peregrine
             }
         }
 
-        public async Task PrepareAsync(string statementName, string query)
+        public Task PrepareAsync(string statementName, string query)
         {
             ThrowIfDisposed();
             ThrowIfNotConnected();
 
+            return _prepared.Contains(statementName)
+                ? Task.CompletedTask
+                : PrepareSlow(statementName, query);
+        }
+
+        private async Task PrepareSlow(string statementName, string query)
+        {
             await _writeBuffer
                 .StartMessage('P')
                 .WriteString(statementName)
@@ -65,17 +74,18 @@ namespace Peregrine
                 .EndMessage()
                 .FlushAsync();
 
-            await _readBuffer.ReceiveAsync();
+            await ReadBuffer.ReceiveAsync();
 
-            var message = _readBuffer.ReadMessage();
+            var message = ReadBuffer.ReadMessage();
 
             switch (message)
             {
                 case MessageType.ParseComplete:
+                    _prepared.Add(statementName);
                     break;
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
+                    throw new InvalidOperationException(ReadBuffer.ReadErrorMessage());
 
                 default:
                     throw new NotImplementedException(message.ToString());
@@ -92,7 +102,7 @@ namespace Peregrine
             return WriteExecFinish();
         }
 
-        internal ReadBuffer ReadBuffer => _readBuffer;
+        internal ReadBuffer ReadBuffer { get; private set; }
 
         public Task ExecuteAsync<TResult>(
             string statementName,
@@ -154,11 +164,11 @@ namespace Peregrine
             Action<TResult, ReadBuffer, int, int> columnBinder)
         {
             await WriteExecFinish();
-            await _readBuffer.ReceiveAsync();
+            await ReadBuffer.ReceiveAsync();
 
             read:
 
-            var message = _readBuffer.ReadMessage();
+            var message = ReadBuffer.ReadMessage();
 
             switch (message)
             {
@@ -172,13 +182,13 @@ namespace Peregrine
                             ? resultFactory(initialState)
                             : default;
 
-                    var columns = _readBuffer.ReadShort();
+                    var columns = ReadBuffer.ReadShort();
 
                     for (var i = 0; i < columns; i++)
                     {
-                        var length = _readBuffer.ReadInt();
+                        var length = ReadBuffer.ReadInt();
 
-                        columnBinder(result, _readBuffer, i, length);
+                        columnBinder(result, ReadBuffer, i, length);
                     }
 
                     goto read;
@@ -188,7 +198,7 @@ namespace Peregrine
                     return;
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
+                    throw new InvalidOperationException(ReadBuffer.ReadErrorMessage());
 
                 default:
                     throw new NotImplementedException(message.ToString());
@@ -209,22 +219,22 @@ namespace Peregrine
             await OpenSocketAsync(millisecondsTimeout);
 
             _writeBuffer = new WriteBuffer(_awaitableSocket);
-            _readBuffer = new ReadBuffer(_awaitableSocket);
+            ReadBuffer = new ReadBuffer(_awaitableSocket);
 
             await WriteStartupAsync();
 
-            await _readBuffer.ReceiveAsync();
+            await ReadBuffer.ReceiveAsync();
 
             read:
 
-            var message = _readBuffer.ReadMessage();
+            var message = ReadBuffer.ReadMessage();
 
             switch (message)
             {
                 case MessageType.AuthenticationRequest:
                 {
                     var authenticationRequestType
-                        = (AuthenticationRequestType)_readBuffer.ReadInt();
+                        = (AuthenticationRequestType)ReadBuffer.ReadInt();
 
                     switch (authenticationRequestType)
                     {
@@ -235,7 +245,7 @@ namespace Peregrine
 
                         case AuthenticationRequestType.AuthenticationMD5Password:
                         {
-                            var salt = _readBuffer.ReadBytes(4);
+                            var salt = ReadBuffer.ReadBytes(4);
                             var hash = Hashing.CreateMD5(_password, _user, salt);
 
                             await _writeBuffer
@@ -244,7 +254,7 @@ namespace Peregrine
                                 .EndMessage()
                                 .FlushAsync();
 
-                            await _readBuffer.ReceiveAsync();
+                            await ReadBuffer.ReceiveAsync();
 
                             goto read;
                         }
@@ -255,7 +265,7 @@ namespace Peregrine
                 }
 
                 case MessageType.ErrorResponse:
-                    throw new InvalidOperationException(_readBuffer.ReadErrorMessage());
+                    throw new InvalidOperationException(ReadBuffer.ReadErrorMessage());
 
                 case MessageType.BackendKeyData:
                 case MessageType.EmptyQueryResponse:

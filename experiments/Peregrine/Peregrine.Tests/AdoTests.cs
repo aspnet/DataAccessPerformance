@@ -34,7 +34,7 @@ namespace Peregrine.Tests
             {
                 await connection.OpenAsync();
 
-                using (var command = connection.CreateCommand())
+                using (var command = (PeregrineCommand)connection.CreateCommand())
                 {
                     command.CommandText = "select id, message from fortune";
 
