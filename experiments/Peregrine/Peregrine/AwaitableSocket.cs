@@ -11,7 +11,7 @@ namespace Peregrine
 {
     public sealed class AwaitableSocket : INotifyCompletion, IDisposable
     {
-        private static readonly Action Sentinel = () => { };
+        private static readonly Action _sentinel = () => { };
 
         private readonly SocketAsyncEventArgs _socketAsyncEventArgs;
         private readonly Socket _socket;
@@ -28,7 +28,7 @@ namespace Peregrine
                     {
                         var continuation
                             = _continuation
-                              ?? Interlocked.CompareExchange(ref _continuation, Sentinel, null);
+                              ?? Interlocked.CompareExchange(ref _continuation, _sentinel, null);
 
                         continuation?.Invoke();
                     };
@@ -106,9 +106,9 @@ namespace Peregrine
 
         public void OnCompleted(Action continuation)
         {
-            if (_continuation == Sentinel
+            if (_continuation == _sentinel
                 || Interlocked.CompareExchange(
-                    ref _continuation, continuation, null) == Sentinel)
+                    ref _continuation, continuation, null) == _sentinel)
             {
                 Task.Run(continuation);
             }

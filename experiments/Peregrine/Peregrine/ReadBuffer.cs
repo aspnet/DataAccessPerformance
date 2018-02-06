@@ -68,10 +68,12 @@ namespace Peregrine
         public byte[] ReadBytes(int length)
         {
             var bs = new byte[length];
-
             var span = _buffer.Span;
+
             for (var i = 0; i < length; i++)
+            {
                 bs[i] = span[_position++];
+            }
 
             return bs;
         }
@@ -84,28 +86,36 @@ namespace Peregrine
         public short ReadShort()
         {
             var result = BinaryPrimitives.ReadInt16BigEndian(_buffer.Span.Slice(_position, 2));
+
             _position += sizeof(short);
+
             return result;
         }
 
         public ushort ReadUShort()
         {
             var result = BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span.Slice(_position, 2));
+
             _position += sizeof(short);
+
             return result;
         }
 
         public int ReadInt()
         {
             var result = BinaryPrimitives.ReadInt32BigEndian(_buffer.Span.Slice(_position, 4));
+
             _position += sizeof(int);
+
             return result;
         }
 
         public uint ReadUInt()
         {
             var result = BinaryPrimitives.ReadUInt32BigEndian(_buffer.Span.Slice(_position, 4));
+
             _position += sizeof(int);
+
             return result;
         }
 
@@ -116,7 +126,6 @@ namespace Peregrine
 
             while (span[_position++] != 0
                    && _position < _buffer.Length)
-
             {
             }
 
@@ -128,7 +137,9 @@ namespace Peregrine
         public string ReadString(int length)
         {
             var result = PG.UTF8.GetString(_buffer.Span.Slice(_position, length));
+
             _position += length;
+
             return result;
         }
 
