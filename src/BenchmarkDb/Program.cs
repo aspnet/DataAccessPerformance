@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using Npgsql;
 using Peregrine.Ado;
@@ -36,6 +37,7 @@ namespace BenchmarkDb
                 { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
                 { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
+                { "ado-sqlite", new AdoDriver(SqliteFactory.Instance) },
                 { "peregrine", new PeregrineDriver() },
                 { "ado-peregrine", new PeregrineAdoDriver(PeregrineFactory.Instance) }
             };
