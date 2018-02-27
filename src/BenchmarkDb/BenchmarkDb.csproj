@@ -14,8 +14,8 @@
   <ItemGroup>
     <PackageReference Include="MySqlConnector" Version="0.28.2" />
     <PackageReference Include="Npgsql" Version="3.2.5" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
+    <!--<PackageReference Include="System.Data.SqlClient" Version="4.4.0" />-->
+    <PackageReference Include="System.Data.SqlClient" Version="4.5.0-preview2-26227-01" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="1.1.8">
       <PrivateAssets>None</PrivateAssets>
     </PackageReference>
