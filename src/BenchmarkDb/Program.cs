@@ -35,7 +35,7 @@ namespace BenchmarkDb
             = new Dictionary<string, DriverBase>
             {
                 { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
-                { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
+                { "ado-mysql", new NpgsqlAdoDriver() },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
                 { "ado-sqlite", new AdoDriver(SqliteFactory.Instance) },
                 { "peregrine", new PeregrineDriver() },
