@@ -34,8 +34,8 @@ namespace BenchmarkDb
         private static readonly IDictionary<string, DriverBase> _drivers
             = new Dictionary<string, DriverBase>
             {
-                { "ado-npgsql", new AdoDriver(NpgsqlFactory.Instance) },
-                { "ado-mysql", new NpgsqlAdoDriver() },
+                { "ado-npgsql", new NpgsqlAdoDriver() },
+                { "ado-mysql", new AdoDriver(MySqlClientFactory.Instance) },
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
                 { "ado-sqlite", new AdoDriver(SqliteFactory.Instance) },
                 { "peregrine", new PeregrineDriver() },
