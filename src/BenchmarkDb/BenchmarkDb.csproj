@@ -20,6 +20,7 @@
       <PrivateAssets>None</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="2.0.0" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
