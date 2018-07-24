@@ -39,7 +39,8 @@ namespace BenchmarkDb
                 { "ado-sqlclient", new AdoDriver(SqlClientFactory.Instance) },
                 { "ado-sqlite", new AdoDriver(SqliteFactory.Instance) },
                 { "peregrine", new PeregrineDriver() },
-                { "ado-peregrine", new PeregrineAdoDriver(PeregrineFactory.Instance) }
+                { "ado-peregrine", new PeregrineAdoDriver(PeregrineFactory.Instance) },
+                { "ado-firebirdclient", new FirebirdClientAdoDriver() },
             };
 
         public static async Task<int> Main(string[] args)
